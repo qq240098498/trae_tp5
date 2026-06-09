@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { ChevronLeft, ChevronRight, MapPin, User } from 'lucide-react';
+import { ChevronLeft, ChevronRight, MapPin, User, Bell, MapPinCheck } from 'lucide-react';
 import { useState } from 'react';
 import { useAppStore } from '@/store';
 import { api } from '@/lib/api';
@@ -63,6 +63,13 @@ export default function FeedingSchedule() {
   const getPetName = (id: string) => pets.find((p) => p.id === id)?.name || '-';
   const getStaffName = (id?: string) => (id ? staff.find((s) => s.id === id)?.name : '未分配');
 
+  const isReminderDue = (scheduledDate: string) => {
+    const today = new Date('2026-06-09').getTime();
+    const scheduled = new Date(scheduledDate).getTime();
+    const daysDiff = Math.ceil((scheduled - today) / 86400000);
+    return daysDiff >= 0 && daysDiff <= 2;
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -121,13 +128,18 @@ export default function FeedingSchedule() {
                       parseInt(o.scheduledTime) === parseInt(h) ? (
                         <div
                           key={o.id}
-                          className={`mb-1 rounded-lg border-l-4 p-2 shadow-sm transition-all hover:shadow-md ${STATUS_COLOR[o.status]}10 ${STATUS_COLOR[o.status].replace('bg-', 'border-')}`}
+                          className={`mb-1 rounded-lg border-l-4 p-2 shadow-sm transition-all hover:shadow-md ${STATUS_COLOR[o.status]}10 ${STATUS_COLOR[o.status].replace('bg-', 'border-')} ${isReminderDue(o.scheduledDate) ? 'ring-2 ring-orange-300/50' : ''}`}
                         >
                           <div className="flex items-start justify-between gap-1">
                             <div className="flex-1 min-w-0">
-                              <p className="truncate text-xs font-bold text-slate-800">
-                                {getPetName(o.petId)} · {o.scheduledTime}
-                              </p>
+                              <div className="flex items-center gap-1">
+                                <p className="truncate text-xs font-bold text-slate-800">
+                                  {getPetName(o.petId)} · {o.scheduledTime}
+                                </p>
+                                {isReminderDue(o.scheduledDate) && (
+                                  <Bell className="h-3 w-3 flex-shrink-0 text-orange-500 animate-pulse" title="提前两天提醒" />
+                                )}
+                              </div>
                               <p className="mt-0.5 flex items-center gap-1 text-[10px] text-slate-600">
                                 <MapPin className="h-3 w-3 flex-shrink-0" />
                                 <span className="truncate">{o.petAddress.slice(0, 12)}...</span>
@@ -136,6 +148,18 @@ export default function FeedingSchedule() {
                                 <User className="h-3 w-3 flex-shrink-0" />
                                 {getStaffName(o.staffId)}
                               </p>
+                              <div className="mt-1 flex items-center gap-1">
+                                {o.checkedIn ? (
+                                  <span className="inline-flex items-center gap-0.5 rounded bg-emerald-100 px-1.5 py-0.5 text-[9px] font-semibold text-emerald-700">
+                                    <MapPinCheck className="h-2.5 w-2.5" />
+                                    已上门{o.checkInTime}
+                                  </span>
+                                ) : (
+                                  <span className="inline-flex items-center gap-0.5 rounded bg-slate-100 px-1.5 py-0.5 text-[9px] font-semibold text-slate-500">
+                                    未上门
+                                  </span>
+                                )}
+                              </div>
                             </div>
                             <span className={`h-2 w-2 flex-shrink-0 rounded-full ${STATUS_COLOR[o.status]}`} />
                           </div>
@@ -152,7 +176,7 @@ export default function FeedingSchedule() {
 
       <div className="card p-5">
         <h3 className="mb-3 text-sm font-bold text-slate-800">图例</h3>
-        <div className="flex flex-wrap gap-4 text-xs">
+        <div className="flex flex-wrap gap-x-6 gap-y-3 text-xs">
           {[
             { c: 'bg-amber-400', l: '待分配' },
             { c: 'bg-blue-400', l: '已分配' },
@@ -164,6 +188,19 @@ export default function FeedingSchedule() {
               <span className="text-slate-600">{i.l}</span>
             </div>
           ))}
+          <div className="my-1 h-6 w-px bg-slate-200" />
+          <div className="flex items-center gap-2">
+            <Bell className="h-3.5 w-3.5 text-orange-500" />
+            <span className="text-slate-600">提前两天提醒</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <MapPinCheck className="h-3.5 w-3.5 text-emerald-600" />
+            <span className="text-slate-600">已上门签到</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="h-3 w-3 rounded ring-2 ring-orange-300/50" />
+            <span className="text-slate-600">即将到期订单</span>
+          </div>
         </div>
       </div>
     </div>
