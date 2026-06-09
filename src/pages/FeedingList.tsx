@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Plus, Search, MapPin, Clock, User, Edit2, CheckCircle, Eye, X } from 'lucide-react';
 import { useAppStore } from '@/store';
 import { api } from '@/lib/api';
-import type { FeedingOrder, Staff, Pet, Customer } from '../../../shared/types';
+import type { FeedingOrder, Staff, Pet, Customer } from '../../shared/types';
 
 const STATUS_LABEL: Record<string, string> = {
   pending: '待分配',

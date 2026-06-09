@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Edit2, Save, Sparkles } from 'lucide-react';
 import { useAppStore } from '@/store';
 import { api } from '@/lib/api';
-import type { PricingRule, PetType, RoomType } from '../../../shared/types';
+import type { PricingRule, PetType, RoomType } from '../../shared/types';
 
 const PET_LABEL: Record<PetType, string> = { dog: '犬类', cat: '猫类', other: '其他' };
 const ROOM_LABEL: Record<RoomType, string> = { standard: '标准间', deluxe: '豪华间', suite: '套房' };

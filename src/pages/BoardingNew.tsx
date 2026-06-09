@@ -3,7 +3,7 @@ import { ArrowLeft, Calculator } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAppStore } from '@/store';
 import { api } from '@/lib/api';
-import type { Pet, Customer, RoomType, PetType, AddonService } from '../../../shared/types';
+import type { Pet, Customer, RoomType, AddonService } from '../../shared/types';
 
 export default function BoardingNew() {
   const pets = useAppStore((s) => s.pets);

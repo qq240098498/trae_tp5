@@ -3,7 +3,7 @@ import { ChevronLeft, ChevronRight, MapPin, User } from 'lucide-react';
 import { useState } from 'react';
 import { useAppStore } from '@/store';
 import { api } from '@/lib/api';
-import type { FeedingOrder, Pet, Staff } from '../../../shared/types';
+import type { FeedingOrder, Pet, Staff } from '../../shared/types';
 
 const STATUS_COLOR: Record<string, string> = {
   pending: 'bg-amber-400',

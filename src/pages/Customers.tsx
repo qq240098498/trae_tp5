@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
-import { Plus, Search, Phone, MapPin, Award, TrendingUp } from 'lucide-react';
+import { Plus, Search, Phone, MapPin, Award, TrendingUp, X } from 'lucide-react';
 import { useAppStore } from '@/store';
 import { api } from '@/lib/api';
-import type { Customer } from '../../../shared/types';
+import type { Customer, Pet } from '../../shared/types';
 
 const LEVEL_INFO: Record<string, { label: string; color: string; min: number }> = {
   normal: { label: '普通会员', color: 'from-slate-400 to-slate-600', min: 0 },
@@ -17,11 +17,33 @@ export default function Customers() {
   const setCustomers = useAppStore((s) => s.setCustomers);
   const setPets = useAppStore((s) => s.setPets);
   const [keyword, setKeyword] = useState('');
+  const [showModal, setShowModal] = useState(false);
+  const [formData, setFormData] = useState({ name: '', phone: '', address: '' });
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     api.customers.list().then((r) => setCustomers(r as Customer[]));
     api.pets.list().then((r) => setPets(r as Pet[]));
   }, [setCustomers, setPets]);
+
+  const handleSubmit = async () => {
+    if (!formData.name || !formData.phone) return;
+    setLoading(true);
+    try {
+      const newCustomer = await api.customers.create({
+        ...formData,
+        memberLevel: 'normal',
+        totalSpent: 0,
+      });
+      setCustomers([...customers, newCustomer as Customer]);
+      setShowModal(false);
+      setFormData({ name: '', phone: '', address: '' });
+    } catch (err) {
+      alert('新增失败：' + (err instanceof Error ? err.message : '未知错误'));
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const filtered = customers.filter((c) => {
     if (!keyword) return true;
@@ -39,7 +61,7 @@ export default function Customers() {
           <h1 className="text-2xl font-bold text-slate-800">客户管理</h1>
           <p className="mt-1 text-sm text-slate-500">查看和管理所有客户信息</p>
         </div>
-        <button className="btn-primary">
+        <button className="btn-primary" onClick={() => setShowModal(true)}>
           <Plus className="h-4 w-4" />
           新增客户
         </button>
@@ -161,6 +183,72 @@ export default function Customers() {
           </table>
         </div>
       </div>
+
+      {showModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-md overflow-hidden rounded-3xl bg-white shadow-2xl">
+            <div className="flex items-center justify-between border-b border-slate-100 px-6 py-4">
+              <div>
+                <h2 className="text-xl font-bold text-slate-800">新增客户</h2>
+                <p className="mt-0.5 text-xs text-slate-500">填写客户基本信息</p>
+              </div>
+              <button
+                onClick={() => setShowModal(false)}
+                className="rounded-xl p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-600"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="space-y-4 p-6">
+              <div>
+                <label className="mb-1.5 block text-sm font-semibold text-slate-700">客户姓名 *</label>
+                <input
+                  type="text"
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  placeholder="请输入客户姓名"
+                  className="input-field"
+                />
+              </div>
+              <div>
+                <label className="mb-1.5 block text-sm font-semibold text-slate-700">联系电话 *</label>
+                <input
+                  type="text"
+                  value={formData.phone}
+                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                  placeholder="请输入联系电话"
+                  className="input-field"
+                />
+              </div>
+              <div>
+                <label className="mb-1.5 block text-sm font-semibold text-slate-700">家庭地址</label>
+                <textarea
+                  value={formData.address}
+                  onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                  placeholder="请输入家庭地址"
+                  rows={3}
+                  className="input-field resize-none"
+                />
+              </div>
+            </div>
+            <div className="flex gap-3 border-t border-slate-100 bg-slate-50 px-6 py-4">
+              <button
+                onClick={() => setShowModal(false)}
+                className="btn-secondary flex-1"
+              >
+                取消
+              </button>
+              <button
+                onClick={handleSubmit}
+                disabled={loading || !formData.name || !formData.phone}
+                className="btn-primary flex-1 disabled:opacity-50"
+              >
+                {loading ? '保存中...' : '确认新增'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -3,7 +3,7 @@ import { Plus, Search, Filter, Calendar, Edit, Eye, CheckCircle, X } from 'lucid
 import { Link } from 'react-router-dom';
 import { useAppStore } from '@/store';
 import { api } from '@/lib/api';
-import type { BoardingOrder, Staff, Pet, Customer } from '../../../shared/types';
+import type { BoardingOrder, Staff, Pet, Customer } from '../../shared/types';
 
 const STATUS_LABEL: Record<string, string> = {
   pending: '待入住',

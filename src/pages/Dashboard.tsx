@@ -24,7 +24,7 @@ import {
 import { useAppStore } from '@/store';
 import { api } from '@/lib/api';
 import { Link } from 'react-router-dom';
-import type { DashboardStats } from '../../../shared/types';
+import type { DashboardStats } from '../../shared/types';
 
 const PIE_COLORS = ['#0F766E', '#F59E0B', '#FB923C', '#10B981', '#8B5CF6'];
 

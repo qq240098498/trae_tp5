@@ -21,7 +21,7 @@ import {
 } from 'recharts';
 import { useAppStore } from '@/store';
 import { api } from '@/lib/api';
-import type { SalaryRecord, Staff } from '../../../shared/types';
+import type { SalaryRecord, Staff } from '../../shared/types';
 
 const STATUS_LABEL: Record<string, string> = { pending: '待发放', paid: '已发放' };
 const STATUS_COLOR: Record<string, string> = {
