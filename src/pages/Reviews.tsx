@@ -18,6 +18,8 @@ import {
   Clock,
   User,
   PawPrint,
+  Undo2,
+  RotateCcw,
 } from 'lucide-react';
 import { useAppStore } from '@/store';
 import { api } from '@/lib/api';
@@ -77,6 +79,7 @@ export default function Reviews() {
   const [keyword, setKeyword] = useState('');
   const [selected, setSelected] = useState<Review | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
+  const [revokeTarget, setRevokeTarget] = useState<Review | null>(null);
 
   useEffect(() => {
     api.reviews.list().then((r) => setReviews(r as Review[]));
@@ -137,6 +140,20 @@ export default function Reviews() {
     if (note) data.resolutionNote = note;
     await api.reviews.update(id, data);
     refresh();
+    setSelected(null);
+  };
+
+  const revokeReview = async (review: Review, reason: string) => {
+    await api.reviews.update(review.id, {
+      type: 'positive',
+      rating: Math.max(review.rating, 4),
+      status: 'resolved',
+      penaltyAmount: 0,
+      tags: [],
+      resolutionNote: `【差评已撤销】撤销原因：${reason}。原差评内容：${review.content}`,
+    });
+    refresh();
+    setRevokeTarget(null);
     setSelected(null);
   };
 
@@ -458,6 +475,15 @@ export default function Reviews() {
                     >
                       查看详情
                     </button>
+                    {r.type === 'negative' && (
+                      <button
+                        onClick={() => setRevokeTarget(r)}
+                        className="rounded-lg bg-sky-50 px-3 py-2 text-xs font-semibold text-sky-700 hover:bg-sky-100"
+                      >
+                        <Undo2 className="h-3.5 w-3.5" />
+                        撤销差评
+                      </button>
+                    )}
                     {r.type === 'negative' && r.status === 'pending' && (
                       <>
                         <button
@@ -493,6 +519,7 @@ export default function Reviews() {
           onClose={() => setSelected(null)}
           onContact={() => recordContact(selected.id)}
           onUpdateStatus={(status, note) => updateStatus(selected.id, status, note)}
+          onRevoke={() => { setRevokeTarget(selected); }}
         />
       )}
 
@@ -513,6 +540,14 @@ export default function Reviews() {
           negativeTags={NEGATIVE_TAGS}
         />
       )}
+
+      {revokeTarget && (
+        <RevokeConfirmDialog
+          review={revokeTarget}
+          onClose={() => setRevokeTarget(null)}
+          onConfirm={(reason) => revokeReview(revokeTarget, reason)}
+        />
+      )}
     </div>
   );
 }
@@ -525,6 +560,7 @@ function ReviewDetailModal({
   onClose,
   onContact,
   onUpdateStatus,
+  onRevoke,
 }: {
   review: Review;
   staff: Staff[];
@@ -533,6 +569,7 @@ function ReviewDetailModal({
   onClose: () => void;
   onContact: () => void;
   onUpdateStatus: (status: Review['status'], note?: string) => void;
+  onRevoke: () => void;
 }) {
   const s = staff.find((x) => x.id === review.staffId);
   const c = customers.find((x) => x.id === review.customerId);
@@ -670,6 +707,25 @@ function ReviewDetailModal({
                   升级处理
                 </button>
               </div>
+            </div>
+          )}
+
+          {review.type === 'negative' && (
+            <div className="rounded-xl border border-sky-200 bg-sky-50 p-4 space-y-3">
+              <p className="text-sm font-semibold text-sky-800 flex items-center gap-1.5">
+                <RotateCcw className="h-4 w-4" />
+                撤销差评：确认该评价为误判或客户已撤回投诉
+              </p>
+              <p className="text-xs text-sky-700">
+                撤销后将转为好评，清除 {review.penaltyAmount ? `¥${review.penaltyAmount}` : ''} 绩效扣款，并更新工资核算。
+              </p>
+              <button
+                onClick={onRevoke}
+                className="rounded-lg bg-sky-500 px-4 py-2 text-xs font-semibold text-white hover:bg-sky-600"
+              >
+                <Undo2 className="h-3.5 w-3.5" />
+                撤销该差评
+              </button>
             </div>
           )}
         </div>
@@ -926,6 +982,209 @@ function CreateReviewModal({
             取消
           </button>
         </div>
+      </div>
+    </div>
+  );
+}
+
+function RevokeConfirmDialog({
+  review,
+  onClose,
+  onConfirm,
+}: {
+  review: Review;
+  onClose: () => void;
+  onConfirm: (reason: string) => void;
+}) {
+  const [reason, setReason] = useState('');
+  const [step, setStep] = useState<'reason' | 'confirm'>('reason');
+
+  const presetReasons = [
+    '客户误操作，要求撤回差评',
+    '问题已妥善解决，客户表示满意',
+    '评价内容与事实不符，经核实后撤销',
+    '系统操作失误',
+    '其他原因',
+  ];
+
+  const handleConfirm = () => {
+    if (!reason.trim()) return;
+    onConfirm(reason.trim());
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50" onClick={onClose}>
+      <div
+        className="w-full max-w-md rounded-2xl bg-white shadow-2xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {step === 'reason' ? (
+          <>
+            <div className="flex items-center justify-between border-b border-slate-100 px-6 py-4">
+              <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
+                <Undo2 className="h-5 w-5 text-sky-600" />
+                撤销差评
+              </h3>
+              <button onClick={onClose} className="rounded-lg p-1.5 hover:bg-slate-100">
+                <X className="h-5 w-5 text-slate-500" />
+              </button>
+            </div>
+            <div className="space-y-5 p-6">
+              <div className="rounded-xl border border-rose-100 bg-rose-50 p-4">
+                <div className="flex items-start gap-3">
+                  <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-rose-100">
+                    <ThumbsDown className="h-5 w-5 text-rose-600" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1">
+                      <Stars rating={review.rating} />
+                      <span className="badge bg-rose-100 text-rose-700">差评</span>
+                    </div>
+                    <p className="text-sm text-slate-700 line-clamp-3">{review.content}</p>
+                    {review.penaltyAmount && review.penaltyAmount > 0 && (
+                      <p className="mt-2 text-xs font-semibold text-rose-600">
+                        当前绩效扣款：¥{review.penaltyAmount}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              <div className="rounded-xl border border-sky-100 bg-sky-50 p-4 space-y-3">
+                <p className="text-xs font-semibold text-sky-800">撤销后将执行以下操作：</p>
+                <ul className="text-xs text-sky-700 space-y-1.5">
+                  <li className="flex items-center gap-1.5">
+                    <CheckCircle2 className="h-3.5 w-3.5 text-sky-600" />
+                    评价类型变更为「好评」
+                  </li>
+                  <li className="flex items-center gap-1.5">
+                    <CheckCircle2 className="h-3.5 w-3.5 text-sky-600" />
+                    评分调整为不低于 4 星
+                  </li>
+                  <li className="flex items-center gap-1.5">
+                    <CheckCircle2 className="h-3.5 w-3.5 text-sky-600" />
+                    清除绩效扣款 ¥{review.penaltyAmount || 0}
+                  </li>
+                  <li className="flex items-center gap-1.5">
+                    <CheckCircle2 className="h-3.5 w-3.5 text-sky-600" />
+                    清除差评标签，状态标记为已解决
+                  </li>
+                  <li className="flex items-center gap-1.5">
+                    <CheckCircle2 className="h-3.5 w-3.5 text-sky-600" />
+                    下次工资核算时自动补回绩效
+                  </li>
+                </ul>
+              </div>
+
+              <div>
+                <label className="text-sm font-medium text-slate-700 mb-2 block">
+                  撤销原因 <span className="text-rose-500">*</span>
+                </label>
+                <div className="flex flex-wrap gap-2 mb-3">
+                  {presetReasons.map((r) => (
+                    <button
+                      key={r}
+                      onClick={() => setReason(r)}
+                      className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-all ${
+                        reason === r
+                          ? 'bg-sky-500 text-white'
+                          : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                      }`}
+                    >
+                      {r}
+                    </button>
+                  ))}
+                </div>
+                <textarea
+                  value={reason}
+                  onChange={(e) => setReason(e.target.value)}
+                  placeholder="请详细说明撤销差评的原因..."
+                  className="input-field min-h-[80px]"
+                />
+              </div>
+            </div>
+            <div className="flex gap-3 border-t border-slate-100 px-6 py-4">
+              <button
+                onClick={() => setStep('confirm')}
+                disabled={!reason.trim()}
+                className="btn-primary flex-1 justify-center disabled:opacity-60"
+              >
+                下一步：确认
+              </button>
+              <button onClick={onClose} className="btn-secondary flex-1 justify-center">
+                取消
+              </button>
+            </div>
+          </>
+        ) : (
+          <>
+            <div className="flex items-center justify-between border-b border-slate-100 px-6 py-4">
+              <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
+                <AlertTriangle className="h-5 w-5 text-amber-500" />
+                确认撤销
+              </h3>
+              <button onClick={onClose} className="rounded-lg p-1.5 hover:bg-slate-100">
+                <X className="h-5 w-5 text-slate-500" />
+              </button>
+            </div>
+            <div className="space-y-5 p-6">
+              <div className="rounded-xl border border-amber-200 bg-amber-50 p-4">
+                <p className="text-sm font-semibold text-amber-800 mb-2 flex items-center gap-1.5">
+                  <AlertTriangle className="h-4 w-4" />
+                  操作不可逆警告
+                </p>
+                <p className="text-sm text-amber-700">
+                  差评撤销后，原评价内容将以「处理说明」形式保留，但评价类型、扣款记录不可恢复。请确认以下信息无误：
+                </p>
+              </div>
+
+              <div className="space-y-3">
+                <div className="flex justify-between items-center py-2 border-b border-slate-50">
+                  <span className="text-sm text-slate-500">评价类型</span>
+                  <span className="text-sm font-medium">
+                    <span className="text-rose-600">差评</span>
+                    <span className="mx-2 text-slate-300">→</span>
+                    <span className="text-emerald-600">好评</span>
+                  </span>
+                </div>
+                <div className="flex justify-between items-center py-2 border-b border-slate-50">
+                  <span className="text-sm text-slate-500">评分</span>
+                  <span className="text-sm font-medium">
+                    <Stars rating={review.rating} />
+                    <span className="mx-2 text-slate-300">→</span>
+                    <Stars rating={Math.max(review.rating, 4)} />
+                  </span>
+                </div>
+                <div className="flex justify-between items-center py-2 border-b border-slate-50">
+                  <span className="text-sm text-slate-500">绩效扣款</span>
+                  <span className="text-sm font-medium">
+                    <span className="text-rose-600">-¥{review.penaltyAmount || 0}</span>
+                    <span className="mx-2 text-slate-300">→</span>
+                    <span className="text-emerald-600">¥0</span>
+                  </span>
+                </div>
+                <div className="flex justify-between items-center py-2 border-b border-slate-50">
+                  <span className="text-sm text-slate-500">撤销原因</span>
+                  <span className="text-sm font-medium text-slate-700 max-w-[240px] text-right line-clamp-2">
+                    {reason}
+                  </span>
+                </div>
+              </div>
+            </div>
+            <div className="flex gap-3 border-t border-slate-100 px-6 py-4">
+              <button onClick={() => setStep('reason')} className="btn-secondary flex-1 justify-center">
+                返回修改
+              </button>
+              <button
+                onClick={handleConfirm}
+                className="flex-1 rounded-lg bg-sky-500 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-sky-600 flex items-center justify-center gap-1.5"
+              >
+                <Undo2 className="h-4 w-4" />
+                确认撤销差评
+              </button>
+            </div>
+          </>
+        )}
       </div>
     </div>
   );
