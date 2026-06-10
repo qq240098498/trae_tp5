@@ -8,6 +8,7 @@ import BoardingNew from '@/pages/BoardingNew';
 import BoardingPricing from '@/pages/BoardingPricing';
 import FeedingList from '@/pages/FeedingList';
 import FeedingSchedule from '@/pages/FeedingSchedule';
+import FeedingNew from '@/pages/FeedingNew';
 import StaffList from '@/pages/StaffList';
 import Salary from '@/pages/Salary';
 import Pets from '@/pages/Pets';
@@ -41,6 +42,7 @@ function AppRoutes() {
         <Route path="/boarding/new" element={<BoardingNew />} />
         <Route path="/boarding/pricing" element={<BoardingPricing />} />
         <Route path="/feeding" element={<FeedingList />} />
+        <Route path="/feeding/new" element={<FeedingNew />} />
         <Route path="/feeding/schedule" element={<FeedingSchedule />} />
         <Route path="/staff" element={<StaffList />} />
         <Route path="/staff/salary" element={<Salary />} />

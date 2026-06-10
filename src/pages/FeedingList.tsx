@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Plus, Search, MapPin, Clock, User, Edit2, CheckCircle, Eye, X } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { useAppStore } from '@/store';
 import { api } from '@/lib/api';
 import type { FeedingOrder, Staff, Pet, Customer } from '../../shared/types';
@@ -81,10 +82,10 @@ export default function FeedingList() {
           <h1 className="text-2xl font-bold text-slate-800">上门喂养订单</h1>
           <p className="mt-1 text-sm text-slate-500">管理宠物上门喂养服务，分配饲养员</p>
         </div>
-        <button className="btn-primary">
+        <Link to="/feeding/new" className="btn-primary">
           <Plus className="h-4 w-4" />
           新增喂养订单
-        </button>
+        </Link>
       </div>
 
       <div className="flex flex-wrap gap-2">

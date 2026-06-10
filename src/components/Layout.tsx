@@ -73,6 +73,7 @@ const breadcrumbMap: Record<string, string[]> = {
   '/boarding/new': ['寄养服务', '新建订单'],
   '/boarding/pricing': ['寄养服务', '计费规则'],
   '/feeding': ['上门喂养', '喂养订单'],
+  '/feeding/new': ['上门喂养', '新建订单'],
   '/feeding/schedule': ['上门喂养', '日程调度'],
   '/staff': ['饲养员管理', '饲养员档案'],
   '/staff/salary': ['饲养员管理', '工资核算'],
