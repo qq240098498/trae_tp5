@@ -65,6 +65,28 @@ export const api = {
       request('/staff/salary/records', { method: 'POST', body: JSON.stringify(data) }),
     updateSalaryRecord: (id: string, data: unknown) =>
       request(`/staff/salary/records/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+    performance: {
+      fiveStarStats: (month: string, staffId?: string) => {
+        const q = new URLSearchParams();
+        q.append('month', month);
+        if (staffId) q.append('staffId', staffId);
+        return request(`/staff/performance/five-star-stats?${q.toString()}`);
+      },
+      adjustments: (params?: { staffId?: string; month?: string }) => {
+        const q = new URLSearchParams();
+        if (params?.staffId) q.append('staffId', params.staffId);
+        if (params?.month) q.append('month', params.month);
+        const qs = q.toString();
+        return request(`/staff/performance/adjustments${qs ? `?${qs}` : ''}`);
+      },
+      createAdjustment: (data: unknown) =>
+        request('/staff/performance/adjustments', {
+          method: 'POST',
+          body: JSON.stringify(data),
+        }),
+      deleteAdjustment: (id: string) =>
+        request(`/staff/performance/adjustments/${id}`, { method: 'DELETE' }),
+    },
   },
   pets: {
     list: (customerId?: string) =>

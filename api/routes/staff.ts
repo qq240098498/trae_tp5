@@ -1,6 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { storeApi } from '../data/store';
-import type { Staff, SalaryRecord } from '../../shared/types';
+import type { Staff, SalaryRecord, PerformanceAdjustment } from '../../shared/types';
 
 const router = Router();
 
@@ -56,6 +56,39 @@ router.put('/salary/records/:id', (req: Request, res: Response) => {
   const record = storeApi.updateSalaryRecord(req.params.id, req.body);
   if (!record) return res.status(404).json({ error: '记录不存在' });
   res.json(record);
+});
+
+router.get('/performance/five-star-stats', (req: Request, res: Response) => {
+  const { month, staffId } = req.query;
+  if (!month) return res.status(400).json({ error: 'month参数必填' });
+  res.json(storeApi.getFiveStarStats(month as string, staffId as string));
+});
+
+router.get('/performance/adjustments', (req: Request, res: Response) => {
+  const { staffId, month } = req.query;
+  res.json(
+    storeApi.getPerformanceAdjustments({
+      staffId: staffId as string,
+      month: month as string,
+    })
+  );
+});
+
+router.post('/performance/adjustments', (req: Request, res: Response) => {
+  try {
+    const adj = storeApi.createPerformanceAdjustment(
+      req.body as Omit<PerformanceAdjustment, 'id' | 'createdAt'>
+    );
+    res.status(201).json(adj);
+  } catch (e) {
+    res.status(400).json({ error: (e as Error).message });
+  }
+});
+
+router.delete('/performance/adjustments/:id', (req: Request, res: Response) => {
+  const success = storeApi.deletePerformanceAdjustment(req.params.id);
+  if (!success) return res.status(404).json({ error: '调整记录不存在' });
+  res.json({ success: true });
 });
 
 export default router;

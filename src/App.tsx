@@ -12,6 +12,7 @@ import FeedingNew from '@/pages/FeedingNew';
 import StaffList from '@/pages/StaffList';
 import Salary from '@/pages/Salary';
 import Reviews from '@/pages/Reviews';
+import Performance from '@/pages/Performance';
 import Pets from '@/pages/Pets';
 import Customers from '@/pages/Customers';
 import Settings from '@/pages/Settings';
@@ -47,6 +48,7 @@ function AppRoutes() {
         <Route path="/feeding/schedule" element={<FeedingSchedule />} />
         <Route path="/staff" element={<StaffList />} />
         <Route path="/staff/reviews" element={<Reviews />} />
+        <Route path="/staff/performance" element={<Performance />} />
         <Route path="/staff/salary" element={<Salary />} />
         <Route path="/pets" element={<Pets />} />
         <Route path="/customers" element={<Customers />} />

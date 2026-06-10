@@ -12,7 +12,30 @@ import type {
   MemberDiscount,
   Review,
   ReviewSummary,
+  PerformanceAdjustment,
 } from '../../shared/types';
+
+interface FiveStarStat {
+  staffId: string;
+  staffName: string;
+  month: string;
+  completedOrders: number;
+  fiveStarCount: number;
+  fiveStarReviews: Array<{
+    id: string;
+    content: string;
+    customerId: string;
+    tags: string[];
+    rating: number;
+    createdAt: string;
+  }>;
+  basePerformance: number;
+  totalFiveStarBonus: number;
+  adjustments: PerformanceAdjustment[];
+  adjustmentBonus: number;
+  adjustmentPenalty: number;
+  totalBonus: number;
+}
 
 interface AppState {
   isAuthenticated: boolean;
@@ -47,6 +70,10 @@ interface AppState {
   setReviews: (r: Review[]) => void;
   reviewSummaries: ReviewSummary[];
   setReviewSummaries: (r: ReviewSummary[]) => void;
+  fiveStarStats: FiveStarStat[];
+  setFiveStarStats: (f: FiveStarStat[]) => void;
+  performanceAdjustments: PerformanceAdjustment[];
+  setPerformanceAdjustments: (p: PerformanceAdjustment[]) => void;
 }
 
 export const useAppStore = create<AppState>((set) => ({
@@ -82,4 +109,8 @@ export const useAppStore = create<AppState>((set) => ({
   setReviews: (r) => set({ reviews: r }),
   reviewSummaries: [],
   setReviewSummaries: (r) => set({ reviewSummaries: r }),
+  fiveStarStats: [],
+  setFiveStarStats: (f) => set({ fiveStarStats: f }),
+  performanceAdjustments: [],
+  setPerformanceAdjustments: (p) => set({ performanceAdjustments: p }),
 }));

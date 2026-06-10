@@ -57,20 +57,7 @@ export interface Staff {
   hireDate: string;
 }
 
-export interface SalaryRecord {
-  id: string;
-  staffId: string;
-  month: string;
-  baseSalary: number;
-  performance: number;
-  allowance: number;
-  deduction: number;
-  total: number;
-  status: SalaryStatus;
-  completedOrders: number;
-  remark?: string;
-  createdAt: string;
-}
+
 
 export interface Pet {
   id: string;
@@ -161,7 +148,39 @@ export interface ReviewSummary {
   totalReviews: number;
   positiveCount: number;
   negativeCount: number;
+  fiveStarCount: number;
   pendingNegativeCount: number;
   avgRating: number;
   totalPenalty: number;
+}
+
+export type AdjustmentType = 'bonus' | 'penalty' | 'five_star_bonus' | 'allowance_extra' | 'other';
+
+export interface PerformanceAdjustment {
+  id: string;
+  staffId: string;
+  month: string;
+  type: AdjustmentType;
+  amount: number;
+  reason: string;
+  relatedReviewId?: string;
+  createdAt: string;
+}
+
+export interface SalaryRecord {
+  id: string;
+  staffId: string;
+  month: string;
+  baseSalary: number;
+  performance: number;
+  fiveStarBonus: number;
+  allowance: number;
+  deduction: number;
+  adjustments: PerformanceAdjustment[];
+  total: number;
+  status: SalaryStatus;
+  completedOrders: number;
+  fiveStarCount: number;
+  remark?: string;
+  createdAt: string;
 }

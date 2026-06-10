@@ -26,6 +26,8 @@ import type {
   MemberLevel,
   Review,
   ReviewSummary,
+  PerformanceAdjustment,
+  AdjustmentType,
 } from '../../shared/types';
 
 const genId = (prefix: string) => `${prefix}${Date.now()}${Math.floor(Math.random() * 1000)}`;
@@ -41,6 +43,7 @@ interface Store {
   salaryRecords: SalaryRecord[];
   memberDiscounts: MemberDiscount[];
   reviews: Review[];
+  performanceAdjustments: PerformanceAdjustment[];
 }
 
 let store: Store = {
@@ -54,6 +57,7 @@ let store: Store = {
   salaryRecords: [...salaryRecords],
   memberDiscounts: [...memberDiscounts],
   reviews: [...reviews],
+  performanceAdjustments: [],
 };
 
 const calcBoardingPrice = (
@@ -400,33 +404,49 @@ export const storeApi = {
     const monthReviews = store.reviews.filter(
       (r) => r.staffId === staffId && r.createdAt >= start && r.createdAt <= end
     );
+    const fiveStarCount = monthReviews.filter((r) => r.rating === 5).length;
     const negativePenalty = monthReviews
       .filter((r) => r.type === 'negative')
       .reduce((sum, r) => sum + (r.penaltyAmount || 0), 0);
-    const positiveBonus = monthReviews.filter((r) => r.type === 'positive').length * 20;
-    const performance = Math.round(
-      (completedFeedings * 50 + assignedBoardings * 80) * member.performanceRate + positiveBonus
+    const fiveStarBonus = fiveStarCount * 50;
+    const basePerformance = Math.round(
+      (completedFeedings * 50 + assignedBoardings * 80) * member.performanceRate
     );
+    const adjustments = store.performanceAdjustments.filter(
+      (a) => a.staffId === staffId && a.month === month
+    );
+    const totalAdjBonus = adjustments
+      .filter((a) => a.amount > 0)
+      .reduce((s, a) => s + a.amount, 0);
+    const totalAdjPenalty = adjustments
+      .filter((a) => a.amount < 0)
+      .reduce((s, a) => s + Math.abs(a.amount), 0);
+    const performance = basePerformance + fiveStarBonus + totalAdjBonus;
     const allowance = completedFeedings > 30 ? 800 : completedFeedings > 15 ? 500 : 300;
-    const deduction = negativePenalty;
+    const deduction = negativePenalty + totalAdjPenalty;
     const baseSalary = member.baseSalary;
     const total = baseSalary + performance + allowance - deduction;
     const negativeCount = monthReviews.filter((r) => r.type === 'negative').length;
     const remarkParts: string[] = [];
     if (negativeCount > 0) remarkParts.push(`差评${negativeCount}条`);
-    if (positiveBonus > 0) remarkParts.push(`好评奖金+¥${positiveBonus}`);
+    if (fiveStarCount > 0) remarkParts.push(`五星好评${fiveStarCount}条，奖励¥${fiveStarBonus}`);
     if (negativePenalty > 0) remarkParts.push(`差评扣款-¥${negativePenalty}`);
+    if (totalAdjBonus > 0) remarkParts.push(`额外绩效奖励+¥${totalAdjBonus}`);
+    if (totalAdjPenalty > 0) remarkParts.push(`额外扣款-¥${totalAdjPenalty}`);
     return {
       id: genId('sal'),
       staffId,
       month,
       baseSalary,
-      performance,
+      performance: basePerformance,
+      fiveStarBonus,
       allowance,
       deduction,
+      adjustments,
       total: Math.max(0, total),
       status: 'pending',
       completedOrders: completedFeedings + assignedBoardings,
+      fiveStarCount,
       remark: remarkParts.length > 0 ? remarkParts.join('，') : undefined,
       createdAt: new Date().toISOString().split('T')[0],
     };
@@ -467,6 +487,7 @@ export const storeApi = {
       const staffReviews = store.reviews.filter((r) => r.staffId === s.id);
       const positiveCount = staffReviews.filter((r) => r.type === 'positive').length;
       const negativeCount = staffReviews.filter((r) => r.type === 'negative').length;
+      const fiveStarCount = staffReviews.filter((r) => r.rating === 5).length;
       const pendingNegativeCount = staffReviews.filter(
         (r) => r.type === 'negative' && r.status === 'pending'
       ).length;
@@ -484,6 +505,7 @@ export const storeApi = {
         totalReviews: staffReviews.length,
         positiveCount,
         negativeCount,
+        fiveStarCount,
         pendingNegativeCount,
         avgRating,
         totalPenalty,
@@ -526,5 +548,92 @@ export const storeApi = {
   deleteMemberDiscount: (id: string) => {
     store.memberDiscounts = store.memberDiscounts.filter((d) => d.id !== id);
     return true;
+  },
+
+  getPerformanceAdjustments: (params?: { staffId?: string; month?: string }) => {
+    let result = store.performanceAdjustments;
+    if (params?.staffId) result = result.filter((a) => a.staffId === params.staffId);
+    if (params?.month) result = result.filter((a) => a.month === params.month);
+    return result.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  },
+
+  createPerformanceAdjustment: (
+    data: Omit<PerformanceAdjustment, 'id' | 'createdAt'>
+  ): PerformanceAdjustment => {
+    const adj: PerformanceAdjustment = {
+      ...data,
+      id: genId('pa'),
+      createdAt: new Date().toISOString().split('T')[0],
+    };
+    store.performanceAdjustments.push(adj);
+    return adj;
+  },
+
+  deletePerformanceAdjustment: (id: string) => {
+    const before = store.performanceAdjustments.length;
+    store.performanceAdjustments = store.performanceAdjustments.filter((a) => a.id !== id);
+    return store.performanceAdjustments.length < before;
+  },
+
+  getFiveStarStats: (month: string, staffId?: string) => {
+    const start = `${month}-01`;
+    const end = `${month}-31`;
+    const staffList = staffId
+      ? store.staff.filter((s) => s.id === staffId)
+      : store.staff.filter((s) => s.status !== 'inactive');
+    return staffList.map((s) => {
+      const monthReviews = store.reviews.filter(
+        (r) =>
+          r.staffId === s.id && r.createdAt >= start && r.createdAt <= end
+      );
+      const fiveStars = monthReviews.filter((r) => r.rating === 5);
+      const adjustments = store.performanceAdjustments.filter(
+        (a) => a.staffId === s.id && a.month === month
+      );
+      const adjBonus = adjustments
+        .filter((a) => a.amount > 0)
+        .reduce((sum, a) => sum + a.amount, 0);
+      const adjPenalty = adjustments
+        .filter((a) => a.amount < 0)
+        .reduce((sum, a) => sum + Math.abs(a.amount), 0);
+      const completedFeedings = store.feedingOrders.filter(
+        (o) =>
+          o.staffId === s.id &&
+          o.status === 'completed' &&
+          o.scheduledDate >= start &&
+          o.scheduledDate <= end
+      ).length;
+      const assignedBoardings = store.boardingOrders.filter(
+        (o) =>
+          o.assignedStaffId === s.id &&
+          o.status !== 'cancelled' &&
+          o.checkIn >= start &&
+          o.checkIn <= end
+      ).length;
+      const completedOrders = completedFeedings + assignedBoardings;
+      const basePerformance = completedOrders > 30 ? 500 : completedOrders > 15 ? 400 : 300;
+      const fiveStarBonus = fiveStars.length * 50;
+      return {
+        staffId: s.id,
+        staffName: s.name,
+        month,
+        completedOrders,
+        fiveStarCount: fiveStars.length,
+        fiveStarReviews: fiveStars.map((r) => ({
+          id: r.id,
+          content: r.content,
+          customerId: r.customerId,
+          tags: r.tags,
+          rating: r.rating,
+          createdAt: r.createdAt,
+        })),
+        basePerformance,
+        totalFiveStarBonus: fiveStarBonus,
+        adjustments,
+        adjustmentBonus: adjBonus,
+        adjustmentPenalty: adjPenalty,
+        totalBonus: basePerformance + fiveStarBonus + adjBonus - adjPenalty,
+      };
+    });
   },
 };

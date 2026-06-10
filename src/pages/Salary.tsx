@@ -12,6 +12,7 @@ import {
   ThumbsDown,
   DollarSign,
   Info,
+  Star,
 } from 'lucide-react';
 import {
   BarChart,
@@ -52,17 +53,20 @@ export default function Salary() {
   const monthRecords = records.filter((r) => r.month === month);
   const totalBase = monthRecords.reduce((s, r) => s + r.baseSalary, 0);
   const totalPerf = monthRecords.reduce((s, r) => s + r.performance, 0);
+  const totalFiveStarBonus = monthRecords.reduce((s, r) => s + ((r as any).fiveStarBonus || 0), 0);
   const totalAllow = monthRecords.reduce((s, r) => s + r.allowance, 0);
   const totalDed = monthRecords.reduce((s, r) => s + r.deduction, 0);
   const totalNet = monthRecords.reduce((s, r) => s + r.total, 0);
   const paidCount = monthRecords.filter((r) => r.status === 'paid').length;
   const totalPenalty = reviewSummaries.reduce((s, r) => s + r.totalPenalty, 0);
   const totalPendingNeg = reviewSummaries.reduce((s, r) => s + r.pendingNegativeCount, 0);
+  const totalFiveStars = reviewSummaries.reduce((s, r) => s + (r.fiveStarCount || 0), 0);
 
   const chartData = monthRecords.map((r) => ({
     name: staff.find((s) => s.id === r.staffId)?.name || '未知',
     基本工资: r.baseSalary,
-    绩效奖金: r.performance,
+    基础绩效: r.performance,
+    五星奖励: (r as any).fiveStarBonus || 0,
     津贴补贴: r.allowance,
     扣款: -r.deduction,
   }));
@@ -128,7 +132,7 @@ export default function Salary() {
       </div>
 
       {/* Summary */}
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-7">
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-8">
         {[
           {
             label: '应发总金额',
@@ -143,10 +147,16 @@ export default function Salary() {
             color: 'from-sky-500 to-sky-700',
           },
           {
-            label: '绩效奖金',
+            label: '基础绩效',
             value: '¥' + totalPerf.toLocaleString(),
             icon: TrendingUp,
             color: 'from-accent-500 to-orange-500',
+          },
+          {
+            label: '五星奖励',
+            value: '¥' + totalFiveStarBonus.toLocaleString(),
+            icon: Star,
+            color: 'from-amber-400 to-yellow-500',
           },
           {
             label: '津贴补贴',
@@ -167,10 +177,10 @@ export default function Salary() {
             color: 'from-rose-600 to-red-700',
           },
           {
-            label: '待处理差评',
-            value: totalPendingNeg + '条',
-            icon: CheckCircle2,
-            color: 'from-amber-500 to-orange-600',
+            label: '五星好评总数',
+            value: totalFiveStars + '个',
+            icon: Star,
+            color: 'from-amber-500 to-orange-500',
           },
         ].map((c) => (
           <div key={c.label} className={`stat-card bg-gradient-to-br ${c.color}`}>
@@ -200,7 +210,8 @@ export default function Salary() {
                 <Tooltip contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 20px rgba(0,0,0,0.08)', fontSize: '12px' }} />
                 <Legend wrapperStyle={{ fontSize: '12px' }} />
                 <Bar dataKey="基本工资" stackId="a" fill="#0F766E" radius={[0, 0, 0, 0]} />
-                <Bar dataKey="绩效奖金" stackId="a" fill="#F59E0B" />
+                <Bar dataKey="基础绩效" stackId="a" fill="#F59E0B" />
+                <Bar dataKey="五星奖励" stackId="a" fill="#FBBF24" />
                 <Bar dataKey="津贴补贴" stackId="a" fill="#10B981" radius={[4, 4, 0, 0]} />
                 <Bar dataKey="扣款" fill="#F43F5E" radius={[4, 4, 0, 0]} />
               </BarChart>
@@ -219,9 +230,11 @@ export default function Salary() {
                 <tr>
                   <th className="table-th">饲养员</th>
                   <th className="table-th">完成订单</th>
+                  <th className="table-th text-center">五星好评</th>
                   <th className="table-th text-center">好评/差评</th>
                   <th className="table-th text-right">基本工资</th>
-                  <th className="table-th text-right">绩效</th>
+                  <th className="table-th text-right">基础绩效</th>
+                  <th className="table-th text-right">五星奖励</th>
                   <th className="table-th text-right">津贴</th>
                   <th className="table-th text-right">扣款(差评)</th>
                   <th className="table-th text-right">实发</th>
@@ -251,6 +264,16 @@ export default function Salary() {
                           <span className="text-slate-400">-</span>
                         )}
                       </td>
+                      <td className="table-td text-center">
+                        {rs && rs.fiveStarCount > 0 ? (
+                          <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2.5 py-0.5 text-sm font-semibold text-amber-700">
+                            <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
+                            {rs.fiveStarCount}
+                          </span>
+                        ) : (
+                          <span className="text-slate-400 text-xs">-</span>
+                        )}
+                      </td>
                       <td className="table-td">
                         {rs && rs.totalReviews > 0 ? (
                           <div className="flex items-center justify-center gap-2">
@@ -278,6 +301,9 @@ export default function Salary() {
                       </td>
                       <td className="table-td text-right font-medium text-accent-600">
                         {rec ? `+¥${rec.performance}` : '-'}
+                      </td>
+                      <td className="table-td text-right font-medium text-amber-600">
+                        {rec && (rec as any).fiveStarBonus ? `+¥${(rec as any).fiveStarBonus}` : <span className="text-slate-400">-</span>}
                       </td>
                       <td className="table-td text-right font-medium text-emerald-600">
                         {rec ? `+¥${rec.allowance}` : '-'}
