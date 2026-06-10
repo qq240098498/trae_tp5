@@ -85,4 +85,14 @@ export const api = {
       request(`/customers/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
     remove: (id: string) => request(`/customers/${id}`, { method: 'DELETE' }),
   },
+  memberDiscounts: {
+    list: () => request('/member-discounts'),
+    get: (id: string) => request(`/member-discounts/${id}`),
+    getByLevel: (level: string) => request(`/member-discounts/level/${level}`),
+    create: (data: unknown) =>
+      request('/member-discounts', { method: 'POST', body: JSON.stringify(data) }),
+    update: (id: string, data: unknown) =>
+      request(`/member-discounts/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+    remove: (id: string) => request(`/member-discounts/${id}`, { method: 'DELETE' }),
+  },
 };

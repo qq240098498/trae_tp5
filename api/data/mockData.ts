@@ -7,6 +7,7 @@ import type {
   Customer,
   PricingRule,
   AddonService,
+  MemberDiscount,
 } from '../../shared/types';
 
 export const customers: Customer[] = [
@@ -501,5 +502,48 @@ export const salaryRecords: SalaryRecord[] = [
     completedOrders: 18,
     remark: '请假两周',
     createdAt: d(-1),
+  },
+];
+
+export const memberDiscounts: MemberDiscount[] = [
+  {
+    id: 'md1',
+    level: 'normal',
+    levelName: '普通会员',
+    discountRate: 1.0,
+    minSpent: 0,
+    description: '新客户默认等级，无折扣',
+    active: true,
+    createdAt: '2024-01-01',
+  },
+  {
+    id: 'md2',
+    level: 'silver',
+    levelName: '银卡会员',
+    discountRate: 0.95,
+    minSpent: 3000,
+    description: '累计消费满3000元升级，享受95折优惠',
+    active: true,
+    createdAt: '2024-01-01',
+  },
+  {
+    id: 'md3',
+    level: 'gold',
+    levelName: '金卡会员',
+    discountRate: 0.88,
+    minSpent: 10000,
+    description: '累计消费满10000元升级，享受88折优惠',
+    active: true,
+    createdAt: '2024-01-01',
+  },
+  {
+    id: 'md4',
+    level: 'diamond',
+    levelName: '钻石会员',
+    discountRate: 0.8,
+    minSpent: 30000,
+    description: '累计消费满30000元升级，享受8折优惠，专属客服',
+    active: true,
+    createdAt: '2024-01-01',
   },
 ];

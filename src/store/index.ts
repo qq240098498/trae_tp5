@@ -9,6 +9,7 @@ import type {
   PricingRule,
   AddonService,
   DashboardStats,
+  MemberDiscount,
 } from '../../shared/types';
 
 interface AppState {
@@ -38,6 +39,8 @@ interface AppState {
   setPricingRules: (p: PricingRule[]) => void;
   addonServices: AddonService[];
   setAddonServices: (a: AddonService[]) => void;
+  memberDiscounts: MemberDiscount[];
+  setMemberDiscounts: (m: MemberDiscount[]) => void;
 }
 
 export const useAppStore = create<AppState>((set) => ({
@@ -67,4 +70,6 @@ export const useAppStore = create<AppState>((set) => ({
   setPricingRules: (p) => set({ pricingRules: p }),
   addonServices: [],
   setAddonServices: (a) => set({ addonServices: a }),
+  memberDiscounts: [],
+  setMemberDiscounts: (m) => set({ memberDiscounts: m }),
 }));

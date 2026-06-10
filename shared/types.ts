@@ -3,6 +3,7 @@ export type BoardingStatus = 'pending' | 'checked_in' | 'checked_out' | 'cancell
 export type FeedingStatus = 'pending' | 'assigned' | 'in_progress' | 'completed' | 'cancelled';
 export type SalaryStatus = 'pending' | 'paid';
 export type PetType = 'dog' | 'cat' | 'other';
+export type MemberLevel = 'normal' | 'silver' | 'gold' | 'diamond';
 
 export interface BoardingOrder {
   id: string;
@@ -14,6 +15,9 @@ export interface BoardingOrder {
   services: string[];
   status: BoardingStatus;
   totalAmount: number;
+  originalAmount?: number;
+  discountRate?: number;
+  discountAmount?: number;
   assignedStaffId?: string;
   notes?: string;
   createdAt: string;
@@ -31,6 +35,9 @@ export interface FeedingOrder {
   staffId?: string;
   status: FeedingStatus;
   amount: number;
+  originalAmount?: number;
+  discountRate?: number;
+  discountAmount?: number;
   notes?: string;
   createdAt: string;
 }
@@ -80,7 +87,7 @@ export interface Customer {
   name: string;
   phone: string;
   address: string;
-  memberLevel: 'normal' | 'silver' | 'gold' | 'diamond';
+  memberLevel: MemberLevel;
   totalSpent: number;
   createdAt: string;
 }
@@ -113,4 +120,15 @@ export interface DashboardStats {
   orderTrend: { date: string; boarding: number; feeding: number }[];
   serviceDistribution: { name: string; value: number }[];
   recentOrders: (BoardingOrder | FeedingOrder)[];
+}
+
+export interface MemberDiscount {
+  id: string;
+  level: MemberLevel;
+  levelName: string;
+  discountRate: number;
+  minSpent: number;
+  description?: string;
+  active: boolean;
+  createdAt: string;
 }

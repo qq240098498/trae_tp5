@@ -7,6 +7,7 @@ import {
   boardingOrders,
   feedingOrders,
   salaryRecords,
+  memberDiscounts,
 } from './mockData';
 import type {
   BoardingOrder,
@@ -20,6 +21,8 @@ import type {
   DashboardStats,
   RoomType,
   PetType,
+  MemberDiscount,
+  MemberLevel,
 } from '../../shared/types';
 
 const genId = (prefix: string) => `${prefix}${Date.now()}${Math.floor(Math.random() * 1000)}`;
@@ -33,6 +36,7 @@ interface Store {
   boardingOrders: BoardingOrder[];
   feedingOrders: FeedingOrder[];
   salaryRecords: SalaryRecord[];
+  memberDiscounts: MemberDiscount[];
 }
 
 let store: Store = {
@@ -44,6 +48,7 @@ let store: Store = {
   boardingOrders: [...boardingOrders],
   feedingOrders: [...feedingOrders],
   salaryRecords: [...salaryRecords],
+  memberDiscounts: [...memberDiscounts],
 };
 
 const calcBoardingPrice = (
@@ -73,6 +78,66 @@ const calcBoardingPrice = (
     if (svc) total += svc.price;
   });
   return total;
+};
+
+const getDiscountByLevel = (level: MemberLevel): MemberDiscount | undefined => {
+  return store.memberDiscounts.find((d) => d.level === level && d.active);
+};
+
+const applyDiscount = (originalPrice: number, level: MemberLevel) => {
+  const discount = getDiscountByLevel(level);
+  if (!discount) {
+    return {
+      originalAmount: originalPrice,
+      totalAmount: originalPrice,
+      discountRate: 1,
+      discountAmount: 0,
+    };
+  }
+  const discountRate = discount.discountRate;
+  const totalAmount = Math.round(originalPrice * discountRate);
+  const discountAmount = originalPrice - totalAmount;
+  return {
+    originalAmount: originalPrice,
+    totalAmount,
+    discountRate,
+    discountAmount,
+  };
+};
+
+const calcBoardingPriceWithDiscount = (
+  checkIn: string,
+  checkOut: string,
+  roomType: RoomType,
+  petType: PetType,
+  services: string[],
+  customerId?: string
+) => {
+  const originalPrice = calcBoardingPrice(checkIn, checkOut, roomType, petType, services);
+  if (!customerId) {
+    return {
+      originalAmount: originalPrice,
+      price: originalPrice,
+      discountRate: 1,
+      discountAmount: 0,
+    };
+  }
+  const customer = store.customers.find((c) => c.id === customerId);
+  if (!customer) {
+    return {
+      originalAmount: originalPrice,
+      price: originalPrice,
+      discountRate: 1,
+      discountAmount: 0,
+    };
+  }
+  const result = applyDiscount(originalPrice, customer.memberLevel);
+  return {
+    originalAmount: result.originalAmount,
+    price: result.totalAmount,
+    discountRate: result.discountRate,
+    discountAmount: result.discountAmount,
+  };
 };
 
 const getDashboardStats = (): DashboardStats => {
@@ -214,20 +279,30 @@ export const storeApi = {
       : store.boardingOrders,
   getBoardingOrder: (id: string) => store.boardingOrders.find((o) => o.id === id),
   createBoardingOrder: (
-    data: Omit<BoardingOrder, 'id' | 'createdAt' | 'totalAmount'>
+    data: Omit<BoardingOrder, 'id' | 'createdAt' | 'totalAmount' | 'originalAmount' | 'discountRate' | 'discountAmount'>
   ) => {
     const pet = store.pets.find((p) => p.id === data.petId);
-    const totalAmount = calcBoardingPrice(
+    const customer = store.customers.find((c) => c.id === data.customerId);
+    const originalAmount = calcBoardingPrice(
       data.checkIn,
       data.checkOut,
       data.roomType,
       pet?.type || 'dog',
       data.services
     );
+    const discountResult = customer ? applyDiscount(originalAmount, customer.memberLevel) : {
+      originalAmount,
+      totalAmount: originalAmount,
+      discountRate: 1,
+      discountAmount: 0,
+    };
     const o: BoardingOrder = {
       ...data,
       id: genId('b'),
-      totalAmount,
+      originalAmount: discountResult.originalAmount,
+      totalAmount: discountResult.totalAmount,
+      discountRate: discountResult.discountRate,
+      discountAmount: discountResult.discountAmount,
       createdAt: new Date().toISOString().split('T')[0],
     };
     store.boardingOrders.push(o);
@@ -242,15 +317,28 @@ export const storeApi = {
     return null;
   },
   calcBoardingPrice,
+  calcBoardingPriceWithDiscount,
 
   getFeedingOrders: (status?: string) =>
     status && status !== 'all'
       ? store.feedingOrders.filter((o) => o.status === status)
       : store.feedingOrders,
   getFeedingOrder: (id: string) => store.feedingOrders.find((o) => o.id === id),
-  createFeedingOrder: (data: Omit<FeedingOrder, 'id' | 'createdAt'>) => {
+  createFeedingOrder: (data: Omit<FeedingOrder, 'id' | 'createdAt' | 'originalAmount' | 'discountRate' | 'discountAmount'>) => {
+    const customer = store.customers.find((c) => c.id === data.customerId);
+    const originalAmount = data.amount;
+    const discountResult = customer ? applyDiscount(originalAmount, customer.memberLevel) : {
+      originalAmount,
+      totalAmount: originalAmount,
+      discountRate: 1,
+      discountAmount: 0,
+    };
     const o: FeedingOrder = {
       ...data,
+      amount: discountResult.totalAmount,
+      originalAmount: discountResult.originalAmount,
+      discountRate: discountResult.discountRate,
+      discountAmount: discountResult.discountAmount,
       id: genId('f'),
       createdAt: new Date().toISOString().split('T')[0],
     };
@@ -323,5 +411,30 @@ export const storeApi = {
       completedOrders: completedFeedings + assignedBoardings,
       createdAt: new Date().toISOString().split('T')[0],
     };
+  },
+
+  getMemberDiscounts: () => store.memberDiscounts,
+  getMemberDiscount: (id: string) => store.memberDiscounts.find((d) => d.id === id),
+  getMemberDiscountByLevel: (level: MemberLevel) => getDiscountByLevel(level),
+  createMemberDiscount: (data: Omit<MemberDiscount, 'id' | 'createdAt'>) => {
+    const d: MemberDiscount = {
+      ...data,
+      id: genId('md'),
+      createdAt: new Date().toISOString().split('T')[0],
+    };
+    store.memberDiscounts.push(d);
+    return d;
+  },
+  updateMemberDiscount: (id: string, data: Partial<MemberDiscount>) => {
+    const idx = store.memberDiscounts.findIndex((d) => d.id === id);
+    if (idx >= 0) {
+      store.memberDiscounts[idx] = { ...store.memberDiscounts[idx], ...data };
+      return store.memberDiscounts[idx];
+    }
+    return null;
+  },
+  deleteMemberDiscount: (id: string) => {
+    store.memberDiscounts = store.memberDiscounts.filter((d) => d.id !== id);
+    return true;
   },
 };

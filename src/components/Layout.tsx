@@ -15,6 +15,7 @@ import {
   Menu,
   X,
   CalendarClock,
+  Crown,
 } from 'lucide-react';
 import { useState } from 'react';
 import { useAppStore } from '@/store';
@@ -55,6 +56,12 @@ const navGroups = [
     ],
   },
   {
+    label: '会员体系',
+    items: [
+      { to: '/membership-discounts', icon: Crown, label: '等级与折扣' },
+    ],
+  },
+  {
     label: '系统',
     items: [{ to: '/settings', icon: Settings, label: '系统设置' }],
   },
@@ -71,6 +78,7 @@ const breadcrumbMap: Record<string, string[]> = {
   '/staff/salary': ['饲养员管理', '工资核算'],
   '/pets': ['档案管理', '宠物档案'],
   '/customers': ['档案管理', '客户管理'],
+  '/membership-discounts': ['会员体系', '等级与折扣'],
   '/settings': ['系统', '系统设置'],
 };
 

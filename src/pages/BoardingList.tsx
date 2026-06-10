@@ -168,7 +168,26 @@ export default function BoardingList() {
                         <span className="text-xs text-slate-400">未分配</span>
                       )}
                     </td>
-                    <td className="table-td font-bold text-slate-800">¥{o.totalAmount}</td>
+                    <td className="table-td">
+                      <div>
+                        {o.discountAmount && o.discountAmount > 0 ? (
+                          <>
+                            <div className="flex items-center gap-1">
+                              <p className="font-bold text-emerald-600">¥{o.totalAmount}</p>
+                              <span className="rounded-md bg-emerald-50 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-700">
+                                {Math.round((o.discountRate || 1) * 100)}%
+                              </span>
+                            </div>
+                            <p className="text-[10px] text-slate-400">
+                              <span className="line-through">¥{o.originalAmount}</span>
+                              <span className="ml-1">省¥{o.discountAmount}</span>
+                            </p>
+                          </>
+                        ) : (
+                          <p className="font-bold text-slate-800">¥{o.totalAmount}</p>
+                        )}
+                      </div>
+                    </td>
                     <td className="table-td">
                       <span className={`badge ${STATUS_COLOR[o.status]}`}>
                         {STATUS_LABEL[o.status]}
@@ -252,7 +271,22 @@ export default function BoardingList() {
                 </div>
                 <div>
                   <p className="text-xs text-slate-500">金额</p>
-                  <p className="mt-0.5 text-lg font-bold text-brand-700">¥{selected.totalAmount}</p>
+                  {selected.discountAmount && selected.discountAmount > 0 ? (
+                    <div className="mt-0.5">
+                      <div className="flex items-baseline gap-2">
+                        <span className="text-xl font-bold text-emerald-600">¥{selected.totalAmount}</span>
+                        <span className="rounded-md bg-emerald-50 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-700">
+                          {Math.round((selected.discountRate || 1) * 100)}%折
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-slate-400 mt-0.5">
+                        原价<span className="line-through">¥{selected.originalAmount}</span>
+                        <span className="ml-1">省¥{selected.discountAmount}</span>
+                      </p>
+                    </div>
+                  ) : (
+                    <p className="mt-0.5 text-lg font-bold text-brand-700">¥{selected.totalAmount}</p>
+                  )}
                 </div>
               </div>
               {selected.notes && (

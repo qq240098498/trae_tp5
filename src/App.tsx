@@ -13,6 +13,7 @@ import Salary from '@/pages/Salary';
 import Pets from '@/pages/Pets';
 import Customers from '@/pages/Customers';
 import Settings from '@/pages/Settings';
+import MembershipDiscounts from '@/pages/MembershipDiscounts';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const isAuthenticated = useAppStore((s) => s.isAuthenticated);
@@ -45,6 +46,7 @@ function AppRoutes() {
         <Route path="/staff/salary" element={<Salary />} />
         <Route path="/pets" element={<Pets />} />
         <Route path="/customers" element={<Customers />} />
+        <Route path="/membership-discounts" element={<MembershipDiscounts />} />
         <Route path="/settings" element={<Settings />} />
       </Route>
       <Route path="*" element={<Navigate to="/dashboard" replace />} />

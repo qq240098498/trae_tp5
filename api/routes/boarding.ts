@@ -33,15 +33,16 @@ router.put('/orders/:id', (req: Request, res: Response) => {
 });
 
 router.post('/calculate-price', (req: Request, res: Response) => {
-  const { checkIn, checkOut, roomType, petType, services } = req.body;
-  const price = storeApi.calcBoardingPrice(
+  const { checkIn, checkOut, roomType, petType, services, customerId } = req.body;
+  const result = storeApi.calcBoardingPriceWithDiscount(
     checkIn,
     checkOut,
     roomType,
     petType,
-    services || []
+    services || [],
+    customerId
   );
-  res.json({ price });
+  res.json(result);
 });
 
 router.get('/pricing', (_req: Request, res: Response) => {

@@ -1,15 +1,31 @@
 import { useEffect, useState } from 'react';
-import { ArrowLeft, Calculator } from 'lucide-react';
+import { ArrowLeft, Calculator, Award, Percent, Tag } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAppStore } from '@/store';
 import { api } from '@/lib/api';
-import type { Pet, Customer, RoomType, AddonService } from '../../shared/types';
+import type { Pet, Customer, RoomType, AddonService, MemberLevel } from '../../shared/types';
+
+const LEVEL_INFO: Record<MemberLevel, { label: string; color: string }> = {
+  normal: { label: '普通会员', color: 'from-slate-400 to-slate-600' },
+  silver: { label: '银卡会员', color: 'from-slate-300 to-slate-500' },
+  gold: { label: '金卡会员', color: 'from-amber-400 to-orange-500' },
+  diamond: { label: '钻石会员', color: 'from-sky-400 via-cyan-400 to-teal-500' },
+};
+
+interface PriceResult {
+  originalAmount: number;
+  price: number;
+  discountRate: number;
+  discountAmount: number;
+}
 
 export default function BoardingNew() {
   const pets = useAppStore((s) => s.pets);
   const customers = useAppStore((s) => s.customers);
+  const memberDiscounts = useAppStore((s) => s.memberDiscounts);
   const setPets = useAppStore((s) => s.setPets);
   const setCustomers = useAppStore((s) => s.setCustomers);
+  const setMemberDiscounts = useAppStore((s) => s.setMemberDiscounts);
   const addonServices = useAppStore((s) => s.addonServices);
   const setAddonServices = useAppStore((s) => s.setAddonServices);
   const navigate = useNavigate();
@@ -21,26 +37,28 @@ export default function BoardingNew() {
   const [roomType, setRoomType] = useState<RoomType>('standard');
   const [services, setServices] = useState<string[]>([]);
   const [notes, setNotes] = useState('');
-  const [estimatedPrice, setEstimatedPrice] = useState<number | null>(null);
+  const [priceResult, setPriceResult] = useState<PriceResult | null>(null);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     api.pets.list().then((r) => setPets(r as Pet[]));
     api.customers.list().then((r) => setCustomers(r as Customer[]));
     api.boarding.addons().then((r) => setAddonServices(r as AddonService[]));
-  }, [setPets, setCustomers, setAddonServices]);
+    api.memberDiscounts.list().then((r) => setMemberDiscounts(r as typeof memberDiscounts));
+  }, [setPets, setCustomers, setAddonServices, setMemberDiscounts]);
 
   const filteredPets = customerId ? pets.filter((p) => p.customerId === customerId) : pets;
 
   const selectedPet = pets.find((p) => p.id === petId);
+  const selectedCustomer = customers.find((c) => c.id === customerId);
 
   useEffect(() => {
     if (petId && selectedPet && checkIn && checkOut) {
       api.boarding
-        .calcPrice({ checkIn, checkOut, roomType, petType: selectedPet.type, services })
-        .then((r) => setEstimatedPrice((r as { price: number }).price));
+        .calcPrice({ checkIn, checkOut, roomType, petType: selectedPet.type, services, customerId })
+        .then((r) => setPriceResult(r as PriceResult));
     }
-  }, [petId, checkIn, checkOut, roomType, services, selectedPet]);
+  }, [petId, checkIn, checkOut, roomType, services, selectedPet, customerId]);
 
   const toggleService = (id: string) => {
     setServices((prev) => (prev.includes(id) ? prev.filter((s) => s !== id) : [...prev, id]));
@@ -58,7 +76,7 @@ export default function BoardingNew() {
     }
   };
 
-  const petTypeLabel: Record<PetType, string> = { dog: '犬类', cat: '猫类', other: '其他' };
+  const petTypeLabel: Record<string, string> = { dog: '犬类', cat: '猫类', other: '其他' };
 
   return (
     <div className="space-y-6">
@@ -82,9 +100,20 @@ export default function BoardingNew() {
                 <select value={customerId} onChange={(e) => { setCustomerId(e.target.value); setPetId(''); }} className="select-field" required>
                   <option value="">请选择客户</option>
                   {customers.map((c) => (
-                    <option key={c.id} value={c.id}>{c.name} - {c.phone}</option>
+                    <option key={c.id} value={c.id}>{c.name} - {c.phone} [{LEVEL_INFO[c.memberLevel].label}]</option>
                   ))}
                 </select>
+                {selectedCustomer && (
+                  <div className={`mt-2 inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r ${LEVEL_INFO[selectedCustomer.memberLevel].color} px-3 py-1 text-xs font-semibold text-white shadow-sm`}>
+                    <Award className="h-3 w-3" />
+                    {LEVEL_INFO[selectedCustomer.memberLevel].label}
+                    {selectedCustomer.totalSpent > 0 && (
+                      <span className="ml-1 rounded-full bg-white/20 px-1.5 py-0.5 text-[10px]">
+                        累计¥{selectedCustomer.totalSpent.toLocaleString()}
+                      </span>
+                    )}
+                  </div>
+                )}
               </div>
               <div>
                 <label className="mb-1.5 block text-sm font-medium text-slate-700">宠物</label>
@@ -180,9 +209,24 @@ export default function BoardingNew() {
                 <Calculator className="h-4 w-4" />
                 费用预估
               </div>
-              {estimatedPrice !== null ? (
+              {priceResult !== null ? (
                 <div className="mt-3">
-                  <div className="text-4xl font-bold">¥{estimatedPrice}</div>
+                  {priceResult.discountAmount > 0 && (
+                    <div className="mb-1 flex items-center gap-2">
+                      <span className="rounded-full bg-emerald-400/20 px-2 py-0.5 text-[10px] font-semibold text-emerald-200 ring-1 ring-emerald-400/30">
+                        <Tag className="mr-0.5 inline h-2.5 w-2.5" />
+                        会员{Math.round(priceResult.discountRate * 100)}折
+                      </span>
+                    </div>
+                  )}
+                  <div className="flex items-baseline gap-2">
+                    {priceResult.discountAmount > 0 && (
+                      <span className="text-lg text-white/50 line-through">
+                        ¥{priceResult.originalAmount}
+                      </span>
+                    )}
+                    <div className="text-4xl font-bold">¥{priceResult.price}</div>
+                  </div>
                   <p className="mt-1 text-xs text-white/70">
                     实际以退房结算为准
                   </p>
@@ -192,18 +236,41 @@ export default function BoardingNew() {
               )}
             </div>
             <div className="space-y-3 p-6 text-sm">
-              <div className="flex justify-between">
+              <div className="flex justify-between items-center">
                 <span className="text-slate-500">房型费用</span>
                 <span className="font-semibold text-slate-800">自动计算</span>
               </div>
-              <div className="flex justify-between">
+              <div className="flex justify-between items-center">
                 <span className="text-slate-500">周末加价</span>
                 <span className="font-semibold text-slate-800">按日计算</span>
               </div>
-              <div className="flex justify-between">
+              <div className="flex justify-between items-center">
                 <span className="text-slate-500">附加服务</span>
                 <span className="font-semibold text-slate-800">{services.length}项</span>
               </div>
+              {priceResult !== null && priceResult.discountAmount > 0 && (
+                <>
+                  <div className="my-1 border-t border-dashed border-slate-200" />
+                  <div className="flex justify-between items-center">
+                    <span className="text-slate-500 flex items-center gap-1">
+                      <Percent className="h-3.5 w-3.5" />
+                      原价
+                    </span>
+                    <span className="font-semibold text-slate-500 line-through">
+                      ¥{priceResult.originalAmount}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center rounded-xl bg-emerald-50 px-3 py-2 -mx-2">
+                    <span className="text-emerald-700 font-medium flex items-center gap-1">
+                      <Award className="h-3.5 w-3.5" />
+                      会员折扣
+                    </span>
+                    <span className="font-bold text-emerald-700">
+                      -¥{priceResult.discountAmount}
+                    </span>
+                  </div>
+                </>
+              )}
               <div className="border-t border-slate-100 pt-3">
                 <button type="submit" disabled={loading || !customerId || !petId} className="btn-primary w-full justify-center">
                   {loading ? '创建中...' : '创建订单'}
