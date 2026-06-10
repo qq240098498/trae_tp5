@@ -8,6 +8,7 @@ import {
   feedingOrders,
   salaryRecords,
   memberDiscounts,
+  reviews,
 } from './mockData';
 import type {
   BoardingOrder,
@@ -23,6 +24,8 @@ import type {
   PetType,
   MemberDiscount,
   MemberLevel,
+  Review,
+  ReviewSummary,
 } from '../../shared/types';
 
 const genId = (prefix: string) => `${prefix}${Date.now()}${Math.floor(Math.random() * 1000)}`;
@@ -37,6 +40,7 @@ interface Store {
   feedingOrders: FeedingOrder[];
   salaryRecords: SalaryRecord[];
   memberDiscounts: MemberDiscount[];
+  reviews: Review[];
 }
 
 let store: Store = {
@@ -49,6 +53,7 @@ let store: Store = {
   feedingOrders: [...feedingOrders],
   salaryRecords: [...salaryRecords],
   memberDiscounts: [...memberDiscounts],
+  reviews: [...reviews],
 };
 
 const calcBoardingPrice = (
@@ -392,12 +397,25 @@ export const storeApi = {
         o.checkIn >= start &&
         o.checkIn <= end
     ).length;
+    const monthReviews = store.reviews.filter(
+      (r) => r.staffId === staffId && r.createdAt >= start && r.createdAt <= end
+    );
+    const negativePenalty = monthReviews
+      .filter((r) => r.type === 'negative')
+      .reduce((sum, r) => sum + (r.penaltyAmount || 0), 0);
+    const positiveBonus = monthReviews.filter((r) => r.type === 'positive').length * 20;
     const performance = Math.round(
-      (completedFeedings * 50 + assignedBoardings * 80) * member.performanceRate
+      (completedFeedings * 50 + assignedBoardings * 80) * member.performanceRate + positiveBonus
     );
     const allowance = completedFeedings > 30 ? 800 : completedFeedings > 15 ? 500 : 300;
+    const deduction = negativePenalty;
     const baseSalary = member.baseSalary;
-    const total = baseSalary + performance + allowance;
+    const total = baseSalary + performance + allowance - deduction;
+    const negativeCount = monthReviews.filter((r) => r.type === 'negative').length;
+    const remarkParts: string[] = [];
+    if (negativeCount > 0) remarkParts.push(`差评${negativeCount}条`);
+    if (positiveBonus > 0) remarkParts.push(`好评奖金+¥${positiveBonus}`);
+    if (negativePenalty > 0) remarkParts.push(`差评扣款-¥${negativePenalty}`);
     return {
       id: genId('sal'),
       staffId,
@@ -405,12 +423,84 @@ export const storeApi = {
       baseSalary,
       performance,
       allowance,
-      deduction: 0,
-      total,
+      deduction,
+      total: Math.max(0, total),
       status: 'pending',
       completedOrders: completedFeedings + assignedBoardings,
+      remark: remarkParts.length > 0 ? remarkParts.join('，') : undefined,
       createdAt: new Date().toISOString().split('T')[0],
     };
+  },
+
+  getReviews: (params?: { staffId?: string; type?: string; status?: string }) => {
+    let result = store.reviews;
+    if (params?.staffId) result = result.filter((r) => r.staffId === params.staffId);
+    if (params?.type && params.type !== 'all') result = result.filter((r) => r.type === params.type);
+    if (params?.status && params.status !== 'all') result = result.filter((r) => r.status === params.status);
+    return result.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  },
+  getReview: (id: string) => store.reviews.find((r) => r.id === id),
+  createReview: (data: Omit<Review, 'id' | 'createdAt'>) => {
+    const r: Review = {
+      ...data,
+      id: genId('r'),
+      createdAt: new Date().toISOString().split('T')[0],
+    };
+    store.reviews.push(r);
+    return r;
+  },
+  updateReview: (id: string, data: Partial<Review>) => {
+    const idx = store.reviews.findIndex((r) => r.id === id);
+    if (idx >= 0) {
+      store.reviews[idx] = { ...store.reviews[idx], ...data };
+      return store.reviews[idx];
+    }
+    return null;
+  },
+  deleteReview: (id: string) => {
+    store.reviews = store.reviews.filter((r) => r.id !== id);
+    return true;
+  },
+  getReviewSummary: (staffId?: string): ReviewSummary[] => {
+    const staffList = staffId ? store.staff.filter((s) => s.id === staffId) : store.staff;
+    return staffList.map((s) => {
+      const staffReviews = store.reviews.filter((r) => r.staffId === s.id);
+      const positiveCount = staffReviews.filter((r) => r.type === 'positive').length;
+      const negativeCount = staffReviews.filter((r) => r.type === 'negative').length;
+      const pendingNegativeCount = staffReviews.filter(
+        (r) => r.type === 'negative' && r.status === 'pending'
+      ).length;
+      const avgRating =
+        staffReviews.length > 0
+          ? Math.round(
+              (staffReviews.reduce((sum, r) => sum + r.rating, 0) / staffReviews.length) * 10
+            ) / 10
+          : 0;
+      const totalPenalty = staffReviews
+        .filter((r) => r.type === 'negative')
+        .reduce((sum, r) => sum + (r.penaltyAmount || 0), 0);
+      return {
+        staffId: s.id,
+        totalReviews: staffReviews.length,
+        positiveCount,
+        negativeCount,
+        pendingNegativeCount,
+        avgRating,
+        totalPenalty,
+      };
+    });
+  },
+  recordContact: (reviewId: string) => {
+    const idx = store.reviews.findIndex((r) => r.id === reviewId);
+    if (idx >= 0) {
+      store.reviews[idx] = {
+        ...store.reviews[idx],
+        contactAttempts: (store.reviews[idx].contactAttempts || 0) + 1,
+        lastContactAt: new Date().toISOString().split('T')[0],
+      };
+      return store.reviews[idx];
+    }
+    return null;
   },
 
   getMemberDiscounts: () => store.memberDiscounts,

@@ -8,6 +8,10 @@ import {
   Clock,
   ChevronDown,
   Sparkles,
+  ThumbsUp,
+  ThumbsDown,
+  DollarSign,
+  Info,
 } from 'lucide-react';
 import {
   BarChart,
@@ -21,7 +25,7 @@ import {
 } from 'recharts';
 import { useAppStore } from '@/store';
 import { api } from '@/lib/api';
-import type { SalaryRecord, Staff } from '../../shared/types';
+import type { SalaryRecord, Staff, ReviewSummary } from '../../shared/types';
 
 const STATUS_LABEL: Record<string, string> = { pending: '待发放', paid: '已发放' };
 const STATUS_COLOR: Record<string, string> = {
@@ -32,22 +36,28 @@ const STATUS_COLOR: Record<string, string> = {
 export default function Salary() {
   const staff = useAppStore((s) => s.staff);
   const records = useAppStore((s) => s.salaryRecords);
+  const reviewSummaries = useAppStore((s) => s.reviewSummaries);
   const setStaff = useAppStore((s) => s.setStaff);
   const setRecords = useAppStore((s) => s.setSalaryRecords);
+  const setReviewSummaries = useAppStore((s) => s.setReviewSummaries);
   const [month, setMonth] = useState('2026-06');
   const [calcLoading, setCalcLoading] = useState<string | null>(null);
 
   useEffect(() => {
     api.staff.list().then((r) => setStaff(r as Staff[]));
     api.staff.salaryRecords().then((r) => setRecords(r as SalaryRecord[]));
-  }, [setStaff, setRecords]);
+    api.reviews.summary().then((r) => setReviewSummaries(r as ReviewSummary[]));
+  }, [setStaff, setRecords, setReviewSummaries]);
 
   const monthRecords = records.filter((r) => r.month === month);
   const totalBase = monthRecords.reduce((s, r) => s + r.baseSalary, 0);
   const totalPerf = monthRecords.reduce((s, r) => s + r.performance, 0);
   const totalAllow = monthRecords.reduce((s, r) => s + r.allowance, 0);
+  const totalDed = monthRecords.reduce((s, r) => s + r.deduction, 0);
   const totalNet = monthRecords.reduce((s, r) => s + r.total, 0);
   const paidCount = monthRecords.filter((r) => r.status === 'paid').length;
+  const totalPenalty = reviewSummaries.reduce((s, r) => s + r.totalPenalty, 0);
+  const totalPendingNeg = reviewSummaries.reduce((s, r) => s + r.pendingNegativeCount, 0);
 
   const chartData = monthRecords.map((r) => ({
     name: staff.find((s) => s.id === r.staffId)?.name || '未知',
@@ -118,7 +128,7 @@ export default function Salary() {
       </div>
 
       {/* Summary */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-7">
         {[
           {
             label: '应发总金额',
@@ -145,10 +155,22 @@ export default function Salary() {
             color: 'from-emerald-500 to-teal-600',
           },
           {
-            label: '发放进度',
-            value: `${paidCount}/${monthRecords.length}`,
+            label: '扣款合计',
+            value: '¥' + totalDed.toLocaleString(),
+            icon: DollarSign,
+            color: 'from-rose-500 to-pink-600',
+          },
+          {
+            label: '差评扣款总额',
+            value: '¥' + totalPenalty.toLocaleString(),
+            icon: ThumbsDown,
+            color: 'from-rose-600 to-red-700',
+          },
+          {
+            label: '待处理差评',
+            value: totalPendingNeg + '条',
             icon: CheckCircle2,
-            color: 'from-rose-500 to-pink-500',
+            color: 'from-amber-500 to-orange-600',
           },
         ].map((c) => (
           <div key={c.label} className={`stat-card bg-gradient-to-br ${c.color}`}>
@@ -197,11 +219,13 @@ export default function Salary() {
                 <tr>
                   <th className="table-th">饲养员</th>
                   <th className="table-th">完成订单</th>
+                  <th className="table-th text-center">好评/差评</th>
                   <th className="table-th text-right">基本工资</th>
                   <th className="table-th text-right">绩效</th>
                   <th className="table-th text-right">津贴</th>
-                  <th className="table-th text-right">扣款</th>
+                  <th className="table-th text-right">扣款(差评)</th>
                   <th className="table-th text-right">实发</th>
+                  <th className="table-th">备注</th>
                   <th className="table-th">状态</th>
                   <th className="table-th text-right">操作</th>
                 </tr>
@@ -209,6 +233,7 @@ export default function Salary() {
               <tbody>
                 {staff.filter((s) => s.status !== 'inactive').map((s) => {
                   const rec = monthRecords.find((r) => r.staffId === s.id);
+                  const rs = reviewSummaries.find((x) => x.staffId === s.id);
                   return (
                     <tr key={s.id} className="hover:bg-slate-50/50">
                       <td className="table-td">
@@ -226,6 +251,28 @@ export default function Salary() {
                           <span className="text-slate-400">-</span>
                         )}
                       </td>
+                      <td className="table-td">
+                        {rs && rs.totalReviews > 0 ? (
+                          <div className="flex items-center justify-center gap-2">
+                            <span className="inline-flex items-center gap-0.5 text-xs font-semibold text-emerald-700">
+                              <ThumbsUp className="h-3 w-3" />
+                              {rs.positiveCount}
+                            </span>
+                            <span className="text-slate-300">/</span>
+                            <span className={`inline-flex items-center gap-0.5 text-xs font-semibold ${rs.negativeCount > 0 ? 'text-rose-700' : 'text-slate-400'}`}>
+                              <ThumbsDown className="h-3 w-3" />
+                              {rs.negativeCount}
+                            </span>
+                            {rs.pendingNegativeCount > 0 && (
+                              <span className="inline-flex items-center gap-0.5 rounded bg-amber-50 px-1.5 py-0.5 text-[10px] font-semibold text-amber-700">
+                                {rs.pendingNegativeCount}待处理
+                              </span>
+                            )}
+                          </div>
+                        ) : (
+                          <span className="text-slate-400 text-xs">暂无评价</span>
+                        )}
+                      </td>
                       <td className="table-td text-right font-medium text-slate-700">
                         {rec ? `¥${rec.baseSalary.toLocaleString()}` : '-'}
                       </td>
@@ -235,8 +282,19 @@ export default function Salary() {
                       <td className="table-td text-right font-medium text-emerald-600">
                         {rec ? `+¥${rec.allowance}` : '-'}
                       </td>
-                      <td className="table-td text-right font-medium text-rose-600">
-                        {rec && rec.deduction ? `-¥${rec.deduction}` : '-'}
+                      <td className="table-td text-right">
+                        {rec && rec.deduction ? (
+                          <div>
+                            <span className="font-medium text-rose-600">-¥{rec.deduction}</span>
+                            {rs && rs.totalPenalty > 0 && (
+                              <div className="text-[10px] text-rose-500 mt-0.5">
+                                (差评扣款¥{rs.totalPenalty})
+                              </div>
+                            )}
+                          </div>
+                        ) : (
+                          <span className="text-slate-400">-</span>
+                        )}
                       </td>
                       <td className="table-td text-right">
                         {rec ? (
@@ -245,6 +303,18 @@ export default function Salary() {
                           </span>
                         ) : (
                           <span className="text-slate-400">-</span>
+                        )}
+                      </td>
+                      <td className="table-td">
+                        {rec?.remark ? (
+                          <div className="group relative">
+                            <Info className="h-4 w-4 text-slate-400 cursor-help" />
+                            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block z-10 w-48 rounded-lg bg-slate-800 px-3 py-2 text-xs text-white shadow-lg">
+                              {rec.remark}
+                            </div>
+                          </div>
+                        ) : (
+                          <span className="text-slate-300">-</span>
                         )}
                       </td>
                       <td className="table-td">

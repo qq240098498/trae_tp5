@@ -19,6 +19,7 @@ import staffRoutes from './routes/staff.js'
 import petsRoutes from './routes/pets.js'
 import customersRoutes from './routes/customers.js'
 import memberDiscountsRoutes from './routes/memberDiscounts.js'
+import reviewsRoutes from './routes/reviews.js'
 
 // for esm mode
 const __filename = fileURLToPath(import.meta.url)
@@ -44,6 +45,7 @@ app.use('/api/staff', staffRoutes)
 app.use('/api/pets', petsRoutes)
 app.use('/api/customers', customersRoutes)
 app.use('/api/member-discounts', memberDiscountsRoutes)
+app.use('/api/reviews', reviewsRoutes)
 
 /**
  * health

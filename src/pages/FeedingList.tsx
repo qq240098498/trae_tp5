@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
-import { Plus, Search, MapPin, Clock, User, Edit2, CheckCircle, Eye, X } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Plus, Search, MapPin, Clock, User, Edit2, CheckCircle, Eye, X, Star, MessageSquare } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAppStore } from '@/store';
 import { api } from '@/lib/api';
-import type { FeedingOrder, Staff, Pet, Customer } from '../../shared/types';
+import type { FeedingOrder, Staff, Pet, Customer, Review } from '../../shared/types';
 
 const STATUS_LABEL: Record<string, string> = {
   pending: '待分配',
@@ -26,9 +26,12 @@ export default function FeedingList() {
   const staff = useAppStore((s) => s.staff);
   const pets = useAppStore((s) => s.pets);
   const customers = useAppStore((s) => s.customers);
+  const reviews = useAppStore((s) => s.reviews);
   const setStaff = useAppStore((s) => s.setStaff);
   const setPets = useAppStore((s) => s.setPets);
   const setCustomers = useAppStore((s) => s.setCustomers);
+  const setReviews = useAppStore((s) => s.setReviews);
+  const navigate = useNavigate();
 
   const [filter, setFilter] = useState('all');
   const [keyword, setKeyword] = useState('');
@@ -40,7 +43,8 @@ export default function FeedingList() {
     api.staff.list().then((r) => setStaff(r as Staff[]));
     api.pets.list().then((r) => setPets(r as Pet[]));
     api.customers.list().then((r) => setCustomers(r as Customer[]));
-  }, [setOrders, setStaff, setPets, setCustomers]);
+    api.reviews.list().then((r) => setReviews(r as Review[]));
+  }, [setOrders, setStaff, setPets, setCustomers, setReviews]);
 
   const filtered = orders.filter((o) => {
     if (filter !== 'all' && o.status !== filter) return false;
@@ -219,6 +223,29 @@ export default function FeedingList() {
                             <User className="h-4 w-4" />
                           </button>
                         )}
+                        {o.status === 'completed' && (() => {
+                          const hasReview = reviews.find((r) => r.orderId === o.id && r.orderType === 'feeding');
+                          if (hasReview) {
+                            return (
+                              <button
+                                onClick={() => navigate('/staff/reviews')}
+                                className={`rounded-lg p-2 ${hasReview.type === 'positive' ? 'text-emerald-500 hover:bg-emerald-50' : 'text-rose-500 hover:bg-rose-50'}`}
+                                title={`已评价：${hasReview.rating}星`}
+                              >
+                                <Star className="h-4 w-4 fill-current" />
+                              </button>
+                            );
+                          }
+                          return (
+                            <button
+                              onClick={() => navigate('/staff/reviews')}
+                              className="rounded-lg p-2 text-slate-500 hover:bg-amber-50 hover:text-amber-600"
+                              title="添加评价"
+                            >
+                              <MessageSquare className="h-4 w-4" />
+                            </button>
+                          );
+                        })()}
                       </div>
                     </td>
                   </tr>

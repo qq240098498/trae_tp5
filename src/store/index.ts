@@ -10,6 +10,8 @@ import type {
   AddonService,
   DashboardStats,
   MemberDiscount,
+  Review,
+  ReviewSummary,
 } from '../../shared/types';
 
 interface AppState {
@@ -41,6 +43,10 @@ interface AppState {
   setAddonServices: (a: AddonService[]) => void;
   memberDiscounts: MemberDiscount[];
   setMemberDiscounts: (m: MemberDiscount[]) => void;
+  reviews: Review[];
+  setReviews: (r: Review[]) => void;
+  reviewSummaries: ReviewSummary[];
+  setReviewSummaries: (r: ReviewSummary[]) => void;
 }
 
 export const useAppStore = create<AppState>((set) => ({
@@ -72,4 +78,8 @@ export const useAppStore = create<AppState>((set) => ({
   setAddonServices: (a) => set({ addonServices: a }),
   memberDiscounts: [],
   setMemberDiscounts: (m) => set({ memberDiscounts: m }),
+  reviews: [],
+  setReviews: (r) => set({ reviews: r }),
+  reviewSummaries: [],
+  setReviewSummaries: (r) => set({ reviewSummaries: r }),
 }));

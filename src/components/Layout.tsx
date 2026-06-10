@@ -16,6 +16,7 @@ import {
   X,
   CalendarClock,
   Crown,
+  MessageSquare,
 } from 'lucide-react';
 import { useState } from 'react';
 import { useAppStore } from '@/store';
@@ -45,6 +46,7 @@ const navGroups = [
     label: '饲养员管理',
     items: [
       { to: '/staff', icon: Users, label: '饲养员档案' },
+      { to: '/staff/reviews', icon: MessageSquare, label: '评价管理' },
       { to: '/staff/salary', icon: Wallet, label: '工资核算' },
     ],
   },
@@ -76,6 +78,7 @@ const breadcrumbMap: Record<string, string[]> = {
   '/feeding/new': ['上门喂养', '新建订单'],
   '/feeding/schedule': ['上门喂养', '日程调度'],
   '/staff': ['饲养员管理', '饲养员档案'],
+  '/staff/reviews': ['饲养员管理', '评价管理'],
   '/staff/salary': ['饲养员管理', '工资核算'],
   '/pets': ['档案管理', '宠物档案'],
   '/customers': ['档案管理', '客户管理'],

@@ -95,4 +95,24 @@ export const api = {
       request(`/member-discounts/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
     remove: (id: string) => request(`/member-discounts/${id}`, { method: 'DELETE' }),
   },
+  reviews: {
+    list: (params?: { staffId?: string; type?: string; status?: string }) => {
+      const q = new URLSearchParams();
+      if (params?.staffId) q.append('staffId', params.staffId);
+      if (params?.type) q.append('type', params.type);
+      if (params?.status) q.append('status', params.status);
+      const qs = q.toString();
+      return request(`/reviews${qs ? `?${qs}` : ''}`);
+    },
+    summary: (staffId?: string) =>
+      request(`/reviews/summary${staffId ? `?staffId=${staffId}` : ''}`),
+    get: (id: string) => request(`/reviews/${id}`),
+    create: (data: unknown) =>
+      request('/reviews', { method: 'POST', body: JSON.stringify(data) }),
+    update: (id: string, data: unknown) =>
+      request(`/reviews/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+    remove: (id: string) => request(`/reviews/${id}`, { method: 'DELETE' }),
+    recordContact: (id: string) =>
+      request(`/reviews/${id}/contact`, { method: 'POST' }),
+  },
 };

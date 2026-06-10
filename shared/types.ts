@@ -4,6 +4,9 @@ export type FeedingStatus = 'pending' | 'assigned' | 'in_progress' | 'completed'
 export type SalaryStatus = 'pending' | 'paid';
 export type PetType = 'dog' | 'cat' | 'other';
 export type MemberLevel = 'normal' | 'silver' | 'gold' | 'diamond';
+export type ReviewType = 'positive' | 'negative';
+export type ReviewStatus = 'pending' | 'resolved' | 'escalated';
+export type OrderType = 'feeding' | 'boarding';
 
 export interface BoardingOrder {
   id: string;
@@ -131,4 +134,34 @@ export interface MemberDiscount {
   description?: string;
   active: boolean;
   createdAt: string;
+}
+
+export interface Review {
+  id: string;
+  orderId: string;
+  orderType: OrderType;
+  staffId: string;
+  customerId: string;
+  petId: string;
+  type: ReviewType;
+  rating: number;
+  content: string;
+  tags: string[];
+  status: ReviewStatus;
+  resolutionNote?: string;
+  followUpDate?: string;
+  contactAttempts?: number;
+  lastContactAt?: string;
+  penaltyAmount?: number;
+  createdAt: string;
+}
+
+export interface ReviewSummary {
+  staffId: string;
+  totalReviews: number;
+  positiveCount: number;
+  negativeCount: number;
+  pendingNegativeCount: number;
+  avgRating: number;
+  totalPenalty: number;
 }
