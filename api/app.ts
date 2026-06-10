@@ -25,8 +25,17 @@ import reviewsRoutes from './routes/reviews.js'
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
 
-// load env
-dotenv.config()
+const NODE_ENV = process.env.NODE_ENV || 'development';
+const envFiles = [
+  `.env.${NODE_ENV}.local`,
+  `.env.${NODE_ENV}`,
+  '.env.local',
+  '.env',
+];
+for (const file of envFiles) {
+  dotenv.config({ path: file, override: false });
+}
+console.log(`[Server] Environment: ${NODE_ENV.toUpperCase()}`);
 
 const app: express.Application = express()
 

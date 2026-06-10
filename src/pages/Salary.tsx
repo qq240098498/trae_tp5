@@ -13,6 +13,8 @@ import {
   DollarSign,
   Info,
   Star,
+  AlertTriangle,
+  X,
 } from 'lucide-react';
 import {
   BarChart,
@@ -34,6 +36,19 @@ const STATUS_COLOR: Record<string, string> = {
   paid: 'bg-emerald-100 text-emerald-700',
 };
 
+interface ConfirmPayDialogData {
+  recordId: string;
+  staffName: string;
+  staffId: string;
+  baseSalary: number;
+  performance: number;
+  fiveStarBonus: number;
+  allowance: number;
+  deduction: number;
+  total: number;
+  month: string;
+}
+
 export default function Salary() {
   const staff = useAppStore((s) => s.staff);
   const records = useAppStore((s) => s.salaryRecords);
@@ -43,6 +58,8 @@ export default function Salary() {
   const setReviewSummaries = useAppStore((s) => s.setReviewSummaries);
   const [month, setMonth] = useState('2026-06');
   const [calcLoading, setCalcLoading] = useState<string | null>(null);
+  const [payDialog, setPayDialog] = useState<ConfirmPayDialogData | null>(null);
+  const [payingId, setPayingId] = useState<string | null>(null);
 
   useEffect(() => {
     api.staff.list().then((r) => setStaff(r as Staff[]));
@@ -95,10 +112,32 @@ export default function Salary() {
     }
   };
 
-  const markPaid = async (id: string) => {
-    await api.staff.updateSalaryRecord(id, { status: 'paid' });
-    const r = (await api.staff.salaryRecords()) as SalaryRecord[];
-    setRecords(r);
+  const openPayConfirm = (rec: SalaryRecord, staffName: string) => {
+    setPayDialog({
+      recordId: rec.id,
+      staffName,
+      staffId: rec.staffId,
+      baseSalary: rec.baseSalary,
+      performance: rec.performance,
+      fiveStarBonus: (rec as any).fiveStarBonus || 0,
+      allowance: rec.allowance,
+      deduction: rec.deduction,
+      total: rec.total,
+      month: rec.month,
+    });
+  };
+
+  const confirmPay = async () => {
+    if (!payDialog) return;
+    setPayingId(payDialog.recordId);
+    try {
+      await api.staff.updateSalaryRecord(payDialog.recordId, { status: 'paid' });
+      const r = (await api.staff.salaryRecords()) as SalaryRecord[];
+      setRecords(r);
+      setPayDialog(null);
+    } finally {
+      setPayingId(null);
+    }
   };
 
   const batchCalc = async () => {
@@ -364,7 +403,7 @@ export default function Salary() {
                           </button>
                           {rec && rec.status === 'pending' && (
                             <button
-                              onClick={() => markPaid(rec.id)}
+                              onClick={() => openPayConfirm(rec, s.name)}
                               className="rounded-lg px-3 py-1.5 text-xs font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-100"
                             >
                               标记发放
@@ -380,6 +419,104 @@ export default function Salary() {
           </div>
         </div>
       </div>
+
+      {payDialog && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div
+            className="absolute inset-0 bg-slate-900/50 backdrop-blur-sm"
+            onClick={() => !payingId && setPayDialog(null)}
+          />
+          <div className="relative z-10 w-full max-w-md overflow-hidden rounded-2xl bg-white shadow-2xl ring-1 ring-slate-200">
+            <div className="flex items-center justify-between border-b border-slate-100 px-6 py-4">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-100 text-amber-600">
+                  <AlertTriangle className="h-5 w-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-slate-800">确认发放工资</h3>
+                  <p className="text-xs text-slate-500">发放后状态不可撤销</p>
+                </div>
+              </div>
+              <button
+                onClick={() => !payingId && setPayDialog(null)}
+                disabled={payingId !== null}
+                className="rounded-lg p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-600 disabled:opacity-50"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="space-y-4 px-6 py-5">
+              <div className="rounded-xl bg-slate-50 p-4">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-11 w-11 items-center justify-center rounded-full bg-gradient-to-br from-brand-500 to-brand-700 text-sm font-bold text-white">
+                    {payDialog.staffName[0]}
+                  </div>
+                  <div>
+                    <p className="font-semibold text-slate-800">{payDialog.staffName}</p>
+                    <p className="text-xs text-slate-500">{payDialog.month.replace('-', '年')}月 工资</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-2 text-sm">
+                <div className="flex justify-between py-1">
+                  <span className="text-slate-500">基本工资</span>
+                  <span className="font-medium text-slate-700">¥{payDialog.baseSalary.toLocaleString()}</span>
+                </div>
+                <div className="flex justify-between py-1">
+                  <span className="text-slate-500">基础绩效</span>
+                  <span className="font-medium text-accent-600">+¥{payDialog.performance.toLocaleString()}</span>
+                </div>
+                <div className="flex justify-between py-1">
+                  <span className="text-slate-500">五星奖励</span>
+                  <span className="font-medium text-amber-600">+¥{payDialog.fiveStarBonus.toLocaleString()}</span>
+                </div>
+                <div className="flex justify-between py-1">
+                  <span className="text-slate-500">津贴补贴</span>
+                  <span className="font-medium text-emerald-600">+¥{payDialog.allowance.toLocaleString()}</span>
+                </div>
+                <div className="flex justify-between py-1">
+                  <span className="text-slate-500">扣款合计</span>
+                  <span className="font-medium text-rose-600">-¥{payDialog.deduction.toLocaleString()}</span>
+                </div>
+                <div className="my-2 border-t border-dashed border-slate-200" />
+                <div className="flex justify-between items-center py-2">
+                  <span className="font-semibold text-slate-700">实发金额</span>
+                  <span className="text-2xl font-bold text-brand-700">¥{payDialog.total.toLocaleString()}</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex gap-3 border-t border-slate-100 px-6 py-4 bg-slate-50">
+              <button
+                onClick={() => setPayDialog(null)}
+                disabled={payingId !== null}
+                className="btn-secondary flex-1 justify-center disabled:opacity-60"
+              >
+                取消
+              </button>
+              <button
+                onClick={confirmPay}
+                disabled={payingId !== null}
+                className="btn-primary flex-1 justify-center disabled:opacity-60"
+              >
+                {payingId === payDialog.recordId ? (
+                  <>
+                    <Clock className="h-4 w-4 animate-spin" />
+                    发放中...
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle2 className="h-4 w-4" />
+                    确认发放
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
