@@ -24,6 +24,8 @@ interface AppState {
   setBoardingOrders: (o: BoardingOrder[]) => void;
   feedingOrders: FeedingOrder[];
   setFeedingOrders: (o: FeedingOrder[]) => void;
+  feedingVersion: number;
+  incrementFeedingVersion: () => void;
   staff: Staff[];
   setStaff: (s: Staff[]) => void;
   salaryRecords: SalaryRecord[];
@@ -51,6 +53,8 @@ export const useAppStore = create<AppState>((set) => ({
   setBoardingOrders: (o) => set({ boardingOrders: o }),
   feedingOrders: [],
   setFeedingOrders: (o) => set({ feedingOrders: o }),
+  feedingVersion: 0,
+  incrementFeedingVersion: () => set((s) => ({ feedingVersion: s.feedingVersion + 1 })),
   staff: [],
   setStaff: (s) => set({ staff: s }),
   salaryRecords: [],

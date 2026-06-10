@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { ChevronLeft, ChevronRight, MapPin, User, Bell, MapPinCheck } from 'lucide-react';
 import { useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import { useAppStore } from '@/store';
 import { api } from '@/lib/api';
 import type { FeedingOrder, Pet, Staff } from '../../shared/types';
@@ -16,18 +17,20 @@ const STATUS_COLOR: Record<string, string> = {
 export default function FeedingSchedule() {
   const orders = useAppStore((s) => s.feedingOrders);
   const setOrders = useAppStore((s) => s.setFeedingOrders);
+  const feedingVersion = useAppStore((s) => s.feedingVersion);
   const pets = useAppStore((s) => s.pets);
   const staff = useAppStore((s) => s.staff);
   const setPets = useAppStore((s) => s.setPets);
   const setStaff = useAppStore((s) => s.setStaff);
 
   const [baseDate, setBaseDate] = useState(new Date('2026-06-09'));
+  const location = useLocation();
 
   useEffect(() => {
     api.feeding.orders().then((r) => setOrders(r as FeedingOrder[]));
     api.pets.list().then((r) => setPets(r as Pet[]));
     api.staff.list().then((r) => setStaff(r as Staff[]));
-  }, [setOrders, setPets, setStaff]);
+  }, [setOrders, setPets, setStaff, location.pathname, feedingVersion]);
 
   const weekDates = () => {
     const base = new Date(baseDate);
